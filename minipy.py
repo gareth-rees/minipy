@@ -111,7 +111,8 @@ class SerializeVisitor(NodeVisitor):
         self.selftest = selftest
 
     def serialize(self, tree):
-        self.last = '\n'
+        self.lastchar = '\n'
+        self.lastemit = '\n'
         self.depth = -1
         self.prec = Prec.Paren
         self.assoc = Assoc.Non
@@ -180,22 +181,26 @@ class SerializeVisitor(NodeVisitor):
     def idchar(self, c):
         return c.isalnum() or c == '_'
 
-    def emit(self, s, emit=True):
+    def emit_raw(self, s, escape='strict'):
+        self.result.append(s.encode(self.encoding, escape))
+
+    def emit(self, s, emit=True, escape='strict'):
         if emit:
-            if ((self.last not in '0123456789'
-                 or self.last == '0' and self.result[-1] == '0' 
+            if ((self.lastchar not in '0123456789'
+                 or self.lastchar == '0' and self.lastemit == '0' 
                  or s not in self.opnames)
                 and self.idchar(s[0])
-                and self.idchar(self.last)):
-                self.result.append(' ')
-            self.result.append(s)
-            self.last = s[-1]
+                and self.idchar(self.lastchar)):
+                self.emit_raw(' ')
+            self.emit_raw(s, escape)
+            self.lastchar = s[-1]
+            self.lastemit = s
 
     def newline(self):
-        if self.last != '\n':
+        if self.lastchar != '\n':
             self.emit('\n')
             if self.depth > 0:
-                self.result.append(' ' * self.depth * self.indent)
+                self.emit_raw(' ' * self.depth * self.indent)
 
     def visit_alias(self, node):
         self.emit(node.name)
@@ -629,7 +634,8 @@ class SerializeVisitor(NodeVisitor):
                 self.visit(node.step)
 
     def visit_Str(self, node):
-        self.emit(shortest_string_repr(node.s, self.encoding))
+        self.emit_raw(shortest_string_repr(node.s, self.encoding),
+                      'backslashreplace')
 
     def visit_Subscript(self, node):
         with SavePrecedence(self, Prec.Attribute, Assoc.Left):
@@ -704,7 +710,7 @@ class SerializeVisitor(NodeVisitor):
 def serialize_ast(tree, **kwargs):
     """
     Serialize an abstract syntax tree according to the options and
-    return a string.
+    return an encoded string.
     """
     return SerializeVisitor(**kwargs).serialize(tree)
 
@@ -882,8 +888,8 @@ def main():
         out = open(opts.output, 'wb')
     else:
         out = sys.stdout
-    out.write(preserve.encode(encoding, 'backslashreplace'))
-    out.write(minified.encode(encoding, 'backslashreplace'))
+    out.write(preserve)
+    out.write(minified)
     out.write('\n')
 
 if __name__ == '__main__':
