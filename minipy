@@ -126,8 +126,11 @@ class SerializeVisitor(NodeVisitor):
 
     def emit(self, s, emit=True):
         if emit:
-            if ((not self.last.isdigit() or s not in self.opnames)
-                and self.idchar(s[0]) and self.idchar(self.last)):
+            if ((self.last not in '0123456789'
+                 or self.last == '0' and self.result[-1] == '0' 
+                 or s not in self.opnames)
+                and self.idchar(s[0])
+                and self.idchar(self.last)):
                 self.result.append(' ')
             self.result.append(s)
             self.last = s[-1]
@@ -754,7 +757,7 @@ def detect_encoding(filename):
     encoding cookie on the first or second line of the file, as
     specified by PEP 263. Return a pair whose first element is the
     encoding (or 'latin1' if none was found), and whose second element
-    is text that must be copied in the transformed file: the #! line, if
+    is text that must be copied to the transformed file: the #! line, if
     any, and the line containing the encoding cookie, if any.
     """
     import re
