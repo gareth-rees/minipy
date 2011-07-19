@@ -664,11 +664,11 @@ class SerializeVisitor(NodeVisitor):
         self.visit_orelse(node)
 
     def visit_TryFinally(self, node):
-        for b in node.body:
-            self.visit(b)
+        self.emit('try')
+        self.visit_body(node.body)
         if node.finalbody:
             self.newline()
-            self.emit('finalbody')
+            self.emit('finally')
             self.visit_body(node.finalbody)
 
     def visit_Tuple(self, node):
