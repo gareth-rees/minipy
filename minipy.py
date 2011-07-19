@@ -770,10 +770,11 @@ class RenameVisitor(NodeTransformer):
         if name is None or name[:2] == '__' or name in self.reserved:
             return name
         while name not in self.name:
-            newname = string.ascii_lowercase[self.n % 26]
-            n = self.n // 26
+            newname = ''
+            n = self.n + 1
             while n:
-                newname += string.ascii_lowercase[n % 26]
+                n = n - 1
+                newname = string.ascii_lowercase[n % 26] + newname
                 n //= 26
             self.n += 1
             if newname not in self.reserved:
