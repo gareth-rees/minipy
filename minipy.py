@@ -670,8 +670,11 @@ class SerializeVisitor(NodeVisitor):
         self.visit_orelse(node)
 
     def visit_TryFinally(self, node):
-        self.emit('try')
-        self.visit_body(node.body)
+        if len(node.body) == 1 and isinstance(node.body[0], TryExcept):
+            self.visit(node.body[0])
+        else:
+            self.emit('try')
+            self.visit_body(node.body)
         if node.finalbody:
             self.newline()
             self.emit('finally')
