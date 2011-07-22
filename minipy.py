@@ -3,6 +3,9 @@
 
 from __future__ import unicode_literals
 from ast import *
+import imp
+import optparse
+import re
 import string
 import sys
 
@@ -123,8 +126,10 @@ class SerializeVisitor(NodeVisitor):
             original = dump(tree)
             minified = dump(parse(result))
             if original != minified:
-                sys.stderr.write("ORIGINAL\n{2}\n{0}\n\nMINIFIED\n{2}\n{1}\n"
-                                 .format(original, minified, '-' * 72))
+                sys.stderr.write("RESULT\n{3}\n{0}\n\n"
+                                 "ORIGINAL\n{3}\n{1}\n\n"
+                                 "MINIFIED\n{3}\n{2}\n"
+                                 .format(result, original, minified, '-' * 72))
                 raise AssertionError
         return result
 
@@ -721,7 +726,6 @@ class FindReserved(NodeVisitor):
         return self.reserved
 
     def reserve_import(self, n):
-        import imp
         self.reserved.add(n)
         try:
             self.reserved.update(dir(imp.load_module(n, *imp.find_module(n))))
@@ -823,7 +827,6 @@ def detect_encoding(filename):
     is text that must be copied to the transformed file: the #! line, if
     any, and the line containing the encoding cookie, if any.
     """
-    import re
     preserve = ''
     coding_re = re.compile("#.*coding[:=]\s*([-\w.]+)")
     with open(filename, 'rb') as f:
@@ -840,8 +843,6 @@ def detect_encoding(filename):
         return encoding, preserve
 
 def main():
-    import optparse
-
     # Handle command-line arguments.
     p = optparse.OptionParser(usage="usage: %prog [options] [-o OUTPUT] FILE",
                               version='%prog {0}'.format(__version__))
