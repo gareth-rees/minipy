@@ -681,7 +681,7 @@ class SerializeVisitor(NodeVisitor):
             self.visit_body(node.finalbody)
 
     def visit_Tuple(self, node):
-        with SavePrecedence(self, Prec.Paren if len(node.elts) < 2 else Prec.Tuple):
+        with SavePrecedence(self, Prec.Paren):
             self.prec = Prec.Tuple
             for i, e in enumerate(node.elts):
                 self.comma(i)
