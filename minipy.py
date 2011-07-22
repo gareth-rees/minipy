@@ -561,7 +561,8 @@ class SerializeVisitor(NodeVisitor):
             self.emit(']')
 
     def visit_Module(self, node):
-        self.visit_body(node.body, colon=False)
+        if node.body:
+            self.visit_body(node.body, colon=False)
 
     def visit_Name(self, node):
         self.emit(node.id)
