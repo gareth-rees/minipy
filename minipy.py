@@ -767,6 +767,15 @@ def reserved_names_in_ast(tree):
     """
     return FindReserved().reserve(tree)
 
+# <http://docs.python.org/reference/lexical_analysis.html#keywords>
+keywords = set("""and       del       from      not       while
+                  as        elif      global    or        with
+                  assert    else      if        pass      yield
+                  break     except    import    print
+                  class     exec      in        raise
+                  continue  finally   is        return
+                  def       for       lambda    try""").split()
+
 class RenameVisitor(NodeTransformer):
     def __init__(self, reserved=set()):
         self.name = {}
@@ -785,7 +794,7 @@ class RenameVisitor(NodeTransformer):
                 newname = string.ascii_lowercase[n % 26] + newname
                 n //= 26
             self.n += 1
-            if newname not in self.reserved:
+            if newname not in self.reserved and newname not in keywords:
                 self.name[name] = newname
         return self.name[name]
 
