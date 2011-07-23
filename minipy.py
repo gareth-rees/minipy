@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
 from ast import *
 import imp
 import optparse
@@ -774,7 +773,7 @@ keywords = set("""and       del       from      not       while
                   break     except    import    print
                   class     exec      in        raise
                   continue  finally   is        return
-                  def       for       lambda    try""").split()
+                  def       for       lambda    try""".split())
 
 class RenameVisitor(NodeTransformer):
     def __init__(self, reserved=set()):

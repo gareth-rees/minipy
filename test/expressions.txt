@@ -1,0 +1,109 @@
+# Operator precedence and parenthesis -> 
+(a) -> a
+((a)) -> a
+(((a))) -> a
+a ( b ) -> a(b)
+a((b)) -> a(b)
+a((b,)) -> a((b,))
+a((b,c)) -> a((b,c))
+((a, b) for (c, d) in (e, f)) -> ((a,b)for c,d in(e,f))
+(a for b in c for d in e if f) -> (a for b in c for d in e if f)
+a, (b for c in d), e -> a,(b for c in d),e
+a, -> a,
+(a, b, c) -> a,b,c
+(a, b, lambda c: d, e) -> a,b,lambda c:d,e
+lambda a: 1, 2, 3 -> lambda a:1,2,3
+lambda a : (b or c) -> lambda a:b or c
+lambda (a, b): (1, 2, 3) -> lambda(a,b):(1,2,3)
+(lambda a: (lambda b: (lambda c: (d)))) -> lambda a:lambda b:lambda c:d
+a or (b and c) -> a or b and c
+(not a) and b -> not a and b
+not (a in b) -> not a in b
+a in (not b) -> a in(not b)
+not (a not in b) -> not a not in b
+a is (b is c) -> a is(b is c)
+(a is b) is c -> (a is b)is c
+a == b == c -> a==b==c
+(a == b) != c -> (a==b)!=c
+(a != b) <= c -> (a!=b)<=c
+(a < b >= c) -> a<b>=c
+a >= (b > c) -> a>=(b>c)
+(a == b) | c -> (a==b)|c
+a == b | c -> a==b|c
+(a) == (b | c) -> a==b|c
+(a | b) | c -> a|b|c
+a | (b | c) -> a|(b|c)
+(a ^ b) | c -> a^b|c
+a ^ (b | c) -> a^(b|c)
+a ^ b | c -> a^b|c
+(a ^ b) ^ c -> a^b^c
+a ^ (b ^ c) -> a^(b^c)
+(a & b) ^ c -> a&b^c
+a & (b ^ c) -> a&(b^c)
+a & b ^ c -> a&b^c
+(a & b) & c -> a&b&c
+a & (b & c) -> a&(b&c)
+(a << b) & c -> a<<b&c
+a << (b & c) -> a<<(b&c)
+a << b & c -> a<<b&c
+(a << b) << c -> a<<b<<c
+(a << (b << c)) -> a<<(b<<c)
+(a >> b) << c -> a>>b<<c
+a >> (b << c) -> a>>(b<<c)
+a >> b << c -> a>>b<<c
+(a >> b) >> c -> a>>b>>c
+a >> (b >> c) -> a>>(b>>c)
+(a << b) >> c -> a<<b>>c
+((a + b)) >> c -> a+b>>c
+a + (b >> c) -> a+(b>>c)
+a + b >> c -> a+b>>c
+(a + b) + c -> a+b+c
+a + (b + c) -> a+(b+c)
+(a + b) << c -> a+b<<c
+a + (b << c) -> a+(b<<c)
+a + b << c -> a+b<<c
+(a - b) + c -> a-b+c
+a - (b + c) -> a-(b+c)
+a - b + c -> a-b+c
+(a - b) - c -> a-b-c
+a - (b - c) -> a-(b-c)
+(a * b) + c -> a*b+c
+a * (b + (c)) -> a*(b+c)
+a * b + c -> a*b+c
+(a * b) * c -> a*b*c
+a * (b * c) -> a*(b*c)
+((a) * b) - c -> a*b-c
+a * (b - c) -> a*(b-c)
+a * b - c -> a*b-c
+(a / b) * c -> a/b*c
+a / ((b) * c) -> a/(b*c)
+a / b * c -> a/b*c
+(a / b) / c -> a/b/c
+a / (b / c) -> a/(b/c)
+(a // b) * c -> a//b*c
+a // (b * c) -> a//(b*c)
+a // b * c -> a//b*c
+(a // b) // c -> a//b//c
+a // (b // c) -> a//(b//c)
+(a % b) * c -> a%b*c
+a % (b * c) -> a%(b*c)
+a % b * c -> a%b*c
+(a % b) % c -> a%b%c
+a % ((b) % c) -> a%(b%c)
+a * + b -> a*+b
+a * (+b) -> a*+b
+a * - b -> a*-b
+a * (-b) -> a*-b
+a * ~ b -> a*~b
+a * (~b) -> a*~b
+a / + b -> a/+b
+a / (+b) -> a/+b
+a / - b -> a/-b
+a / (-b) -> a/-b
+a / ~ b -> a/~b
+a / (~b) -> a/~b
+a ++ (b) -> a++b
+a + (+ b) -> a++b
++(+(+(+(a)))) -> ++++a
+~(-(+(-(a)))) -> ~-+-a
++ ~ - + ~ - + a -> +~-+~-+a
