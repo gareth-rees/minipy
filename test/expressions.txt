@@ -21,6 +21,8 @@ a if b else (c if d else e) -> a if b else(c if d else e)
 (a if b else c) if d else e -> (a if b else c)if d else e
 0 if 0 else 0 -> 0if 0 else 0
 1 if 1 else 1 -> 1if 1 else 1
+v0 if v0 else v0 -> v0 if v0 else v0
+v1 if v1 else v1 -> v1 if v1 else v1
 a or (b and c) -> a or b and c
 (not a) and b -> not a and b
 not (a in b) -> not a in b
@@ -36,6 +38,14 @@ not (0 in 0) -> not 0in 0
 not (0 not in 0) -> not 0not in 0
 0 is (0 is 1) -> 0is(0is 1)
 (0 is 0) is 1 -> (0is 0)is 1
+v0 or (v0 and v1) -> v0 or v0 and v1
+v1 or (v0 and v1) -> v1 or v0 and v1
+(not v0) and v0 -> not v0 and v0
+not (v0 in v0) -> not v0 in v0
+v0 in (not v0) -> v0 in(not v0)
+not (v0 not in v0) -> not v0 not in v0
+v0 is (v0 is v1) -> v0 is(v0 is v1)
+(v0 is v0) is v1 -> (v0 is v0)is v1
 a == b == c -> a==b==c
 (a == b) != c -> (a==b)!=c
 (a != b) <= c -> (a!=b)<=c

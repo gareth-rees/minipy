@@ -115,6 +115,7 @@ class SerializeVisitor(NodeVisitor):
     def serialize(self, tree):
         self.lastchar = '\n'
         self.lastemit = '\n'
+        self.lastnum = False
         self.depth = -1
         self.prec = Prec.Paren
         self.assoc = Assoc.Non
@@ -188,17 +189,25 @@ class SerializeVisitor(NodeVisitor):
     def emit_raw(self, s, escape='strict'):
         self.result.append(s.encode(self.encoding, escape))
 
+    def space_needed(self, s):
+        if not self.idchar(self.lastchar) or not self.idchar(s[0]):
+            return False
+        if not self.lastnum:
+            return True
+        if (self.lastchar in '123456789' and s[0] != 'e'
+            or self.lastchar == '0' and self.lastemit != '0' and s[0] != 'e'
+            or self.lastemit == '0' and s[0] not in 'beox'):
+            return False
+        return True
+
     def emit(self, s, emit=True, escape='strict'):
         if emit:
-            if (self.idchar(self.lastchar)
-                and self.idchar(s[0])
-                and (self.lastchar not in '123456789' or s[0] == 'e')
-                and (self.lastchar != '0' or self.lastemit == '0' or s[0] == 'e')
-                and (self.lastemit != '0' or s[0] in 'beox')):
+            if self.space_needed(s):
                 self.emit_raw(' ')
             self.emit_raw(s, escape)
             self.lastchar = s[-1]
             self.lastemit = s
+            self.lastnum = False
 
     def newline(self):
         if self.lastchar != '\n':
@@ -573,6 +582,7 @@ class SerializeVisitor(NodeVisitor):
             with SavePrecedence(self, 16):
                 self.prec = 16
                 self.emit(repr(node.n))
+        self.lastnum = True
 
     def visit_Pass(self, node):
         self.emit('pass' if self.selftest else '0')
