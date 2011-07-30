@@ -15,6 +15,7 @@ __author__ = 'Gareth Rees <http://garethrees.org/>'
 __all__ = 'shortest_string_repr serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
 
 escape_sequences = [
+    ('\0', r'\0'),
     ('\a', r'\a'),
     ('\b', r'\b'),
     ('\f', r'\f'),
@@ -23,6 +24,12 @@ escape_sequences = [
     ('\v', r'\v'),
     ]
 escape_set = set(e[0] for e in escape_sequences)
+
+def encode(s, encoding, error):
+    try:
+        return s.encode(encoding, error)
+    except UnicodeDecodeError:
+        return repr(s)[1:-1]
 
 def shortest_string_repr(s, encoding):
     """
@@ -50,7 +57,7 @@ def shortest_string_repr(s, encoding):
     # unable to use a particular set of quotation marks: no set of
     # quotes can be used if that set appears in the string, and newlines
     # may not appear in single- or double-quoted strings.
-    if (s.count('\\') == s.encode(encoding, 'backslashreplace').count('\\')
+    if (s.count('\\') == encode(s, encoding, 'backslashreplace').count('\\')
         and not set(s) & escape_set
         and s and s[-1] != '\\'):
         for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
@@ -187,7 +194,7 @@ class SerializeVisitor(NodeVisitor):
         return c.isalnum() or c == '_'
 
     def emit_raw(self, s, escape='strict'):
-        self.result.append(s.encode(self.encoding, escape))
+        self.result.append(encode(s, self.encoding, escape))
 
     def space_needed(self, s):
         if not self.idchar(self.lastchar) or not self.idchar(s[0]):
