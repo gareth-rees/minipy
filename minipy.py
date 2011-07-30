@@ -314,7 +314,7 @@ class SerializeVisitor(NodeVisitor):
     def visit_Assign(self, node):
         for t in node.targets:
             self.visit(t)
-        self.emit('=')
+            self.emit('=')
         self.visit(node.value)
 
     def visit_Attribute(self, node):
