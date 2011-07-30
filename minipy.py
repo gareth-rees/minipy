@@ -192,8 +192,9 @@ class SerializeVisitor(NodeVisitor):
         if emit:
             if (self.idchar(self.lastchar)
                 and self.idchar(s[0])
-                and (self.lastchar not in '0123456789' or s[0] == 'e')
-                and (self.lastemit != '0' or s[0] not in 'box')):
+                and (self.lastchar not in '123456789' or s[0] == 'e')
+                and (self.lastchar != '0' or self.lastemit == '0' or s[0] == 'e')
+                and (self.lastemit != '0' or s[0] in 'beox')):
                 self.emit_raw(' ')
             self.emit_raw(s, escape)
             self.lastchar = s[-1]

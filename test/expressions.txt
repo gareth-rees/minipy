@@ -16,6 +16,11 @@ lambda a: 1, 2, 3 -> lambda a:1,2,3
 lambda a : (b or c) -> lambda a:b or c
 lambda (a, b): (1, 2, 3) -> lambda(a,b):(1,2,3)
 (lambda a: (lambda b: (lambda c: (d)))) -> lambda a:lambda b:lambda c:d
+a if b else c -> a if b else c
+a if b else (c if d else e) -> a if b else(c if d else e)
+(a if b else c) if d else e -> (a if b else c)if d else e
+0 if 0 else 0 -> 0if 0 else 0
+1 if 1 else 1 -> 1if 1 else 1
 a or (b and c) -> a or b and c
 (not a) and b -> not a and b
 not (a in b) -> not a in b
@@ -23,6 +28,14 @@ a in (not b) -> a in(not b)
 not (a not in b) -> not a not in b
 a is (b is c) -> a is(b is c)
 (a is b) is c -> (a is b)is c
+0 or (0 and 1) -> 0 or 0and 1
+1 or (0 and 1) -> 1or 0and 1
+(not 0) and 0 -> not 0and 0
+not (0 in 0) -> not 0in 0
+0 in (not 0) -> 0in(not 0)
+not (0 not in 0) -> not 0not in 0
+0 is (0 is 1) -> 0is(0is 1)
+(0 is 0) is 1 -> (0is 0)is 1
 a == b == c -> a==b==c
 (a == b) != c -> (a==b)!=c
 (a != b) <= c -> (a!=b)<=c
