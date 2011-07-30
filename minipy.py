@@ -315,10 +315,12 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_Assert(self, node):
         self.emit('assert')
-        self.visit(node.test)
-        if node.msg:
-            self.comma()
-            self.visit(node.msg)
+        with SavePrecedence(self, Prec.Tuple):
+            self.prec = Prec.Tuple
+            self.visit(node.test)
+            if node.msg:
+                self.comma()
+                self.visit(node.msg)
 
     def visit_Assign(self, node):
         for t in node.targets:
