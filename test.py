@@ -20,12 +20,14 @@ class MinipyTests(unittest.TestCase):
             components = f.split('.')
             if len(components) == 3:
                 for c in components[1]:
-                    args.append({
-                            'J': '--nojoinlines',
-                            'D': '--docstrings',
-                            'R': '--rename',
-                            '4': '--indent=4',
-                            }[c])
+                    a = {
+                        'J': '--nojoinlines',
+                        'D': '--docstrings',
+                        'R': '--rename',
+                        '4': '--indent=4',
+                        }.get(c)
+                    if a:
+                        args.append(a)
                 args.append(os.path.join(testdir, f))
                 pipe = subprocess.Popen(args, 
                                         stdout=subprocess.PIPE)

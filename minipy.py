@@ -36,7 +36,7 @@ def shortest_string_repr(s, encoding):
             s.encode('ascii')
         except UnicodeEncodeError:
             prefix = 'u'
-    candidates = set()
+    candidates = []
 
     # The constraints on r-prefixed strings are really quite tight:
     #
@@ -55,7 +55,7 @@ def shortest_string_repr(s, encoding):
         and s and s[-1] != '\\'):
         for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
             if q not in s:
-                candidates.add("{0}r{1}{2}{1}".format(prefix, q, s))
+                candidates.append("{0}r{1}{2}{1}".format(prefix, q, s))
 
     # Ordinary strings are easy.
     for q in ("'''", '"""', "'", '"'):
@@ -65,7 +65,7 @@ def shortest_string_repr(s, encoding):
         if len(q) == 1:
             t = t.replace('\n', r'\n')
         t = t.replace(q, '\\' + q)
-        candidates.add("{0}{1}{2}{1}".format(prefix, q, t))
+        candidates.append("{0}{1}{2}{1}".format(prefix, q, t))
     return min(candidates, key=len)
 
 class Assoc:
@@ -639,8 +639,8 @@ class SerializeVisitor(NodeVisitor):
                 self.visit(node.step)
 
     def visit_Str(self, node):
-        self.emit_raw(shortest_string_repr(node.s, self.encoding),
-                      'backslashreplace')
+        self.emit(shortest_string_repr(node.s, self.encoding),
+                  escape='backslashreplace')
 
     def visit_Subscript(self, node):
         with SavePrecedence(self, Prec.Attribute, Assoc.Left):
