@@ -725,6 +725,7 @@ class SerializeVisitor(NodeVisitor):
         self.emit('while')
         self.visit(node.test)
         self.visit_body(node.body)
+        self.visit_orelse(node)
 
     def visit_With(self, node):
         self.emit('with')
