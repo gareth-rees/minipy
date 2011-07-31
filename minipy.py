@@ -38,18 +38,22 @@ class SavePrecedence:
                       or prec == self.v.prec
                       and (self.v.assoc == Assoc.Non
                            or self.v.assoc != assoc))
+
     def __enter__(self):
         self.saved_prec = self.v.prec
         self.saved_assoc = self.v.assoc
+        self.saved_operator = self.v.operator
         if self.paren:
             self.v.emit('(')
             self.v.prec = Prec.Paren
             self.v.assoc = Assoc.Non
+
     def __exit__(self, *e):
         if self.paren:
             self.v.emit(')')
         self.v.prec = self.saved_prec
         self.v.assoc = self.saved_assoc
+        self.v.operator = self.saved_operator
 
 class SerializeVisitor(NodeVisitor):
     def __init__(self, docstrings=False, encoding='latin1', indent=1,
@@ -68,6 +72,7 @@ class SerializeVisitor(NodeVisitor):
         self.depth = -1
         self.prec = Prec.Paren
         self.assoc = Assoc.Non
+        self.operator = None
         self.result = []
         self.visit(tree)
         result = ''.join(self.result)
@@ -281,6 +286,7 @@ class SerializeVisitor(NodeVisitor):
         with SavePrecedence(self, Prec.Attribute, Assoc.Left):
             self.prec = Prec.Attribute
             self.assoc = Assoc.Left
+            self.operator = '.'
             self.visit(node.value)
             self.emit('.')
             self.emit(node.attr)
@@ -296,6 +302,7 @@ class SerializeVisitor(NodeVisitor):
         with SavePrecedence(self, prec, assoc):
             self.prec = prec
             self.assoc = Assoc.Left
+            self.operator = name
             self.visit(node.left)
             self.emit(name)
             self.assoc = Assoc.Right
@@ -306,6 +313,7 @@ class SerializeVisitor(NodeVisitor):
         with SavePrecedence(self, prec, assoc):
             self.prec = prec
             self.assoc = Assoc.Left
+            self.operator = name
             for i, v in enumerate(node.values):
                 self.emit(name, i)
                 self.visit(node.values[i])
@@ -534,18 +542,18 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_Num(self, node):
         s = repr(node.n)
+        sign = ''
+        prec = Prec.Attribute
+        if self.operator == '-':
+            prec = 14           # -(1), not -1: see issue #38.
         if s[0] == '-':
-            with SavePrecedence(self, 16):
-                if isinstance(node.n, float) and math.isinf(node.n):
-                    self.emit('-1e400')
-                else:
-                    self.emit(s)
-        else:
-            with SavePrecedence(self, Prec.Attribute, Assoc.Right):
-                if isinstance(node.n, float) and math.isinf(node.n):
-                    self.emit('1e400')
-                else:
-                    self.emit(s)
+            sign = '-'
+            prec = 16
+        with SavePrecedence(self, prec, Assoc.Right):
+            if isinstance(node.n, float) and math.isinf(node.n):
+                self.emit(sign + '1e400')
+            else:
+                self.emit(s)
         self.lastnum = True
 
     def visit_Pass(self, node):
@@ -749,6 +757,7 @@ class SerializeVisitor(NodeVisitor):
         with SavePrecedence(self, prec, assoc):
             self.prec = prec
             self.assoc = assoc
+            self.operator = name
             self.emit(name)
             self.visit(node.operand)
 
