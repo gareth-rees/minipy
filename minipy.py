@@ -316,7 +316,8 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_Call(self, node):
         with SavePrecedence(self):
-            self.prec = Prec.Or
+            self.prec = Prec.Attribute
+            self.assoc = Assoc.Left
             self.visit(node.func)
             if (not node.kwargs and not node.starargs
                 and not node.keywords
