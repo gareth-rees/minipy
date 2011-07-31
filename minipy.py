@@ -12,74 +12,7 @@ __version__ = '0.1'
 __version_info__ = (0, 1)
 __license__ = "GNU General Public License (GPL) Version 3"
 __author__ = 'Gareth Rees <http://garethrees.org/>'
-__all__ = 'shortest_string_repr serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
-
-_escape_sequences = [
-    ('\a', r'\a'),
-    ('\b', r'\b'),
-    ('\f', r'\f'),
-    ('\r', r'\r'),
-    ('\t', r'\t'),
-    ('\v', r'\v'),
-    ]
-_escape_set = set(e[0] for e in _escape_sequences)
-
-def encode_string(s, encoding, escapes=True, quotes=None):
-    if escapes:
-        s = s.replace('\\', '\\\\')
-        for e, f in _escape_sequences:
-            s = s.replace(e, f)
-        if quotes:
-            if len(quotes) == 1:
-                s = s.replace('\n', r'\n')
-            s = s.replace(quotes, '\\' + quotes)
-    if isinstance(s, unicode):
-        return s.encode(encoding, 'backslashreplace')
-    else:
-        def escape(m):
-            c = ord(m.group(0))
-            if c < 8 and (m.group(1) == '' or not m.group(1).isdigit()):
-                if c == 0:
-                    return r'\0'
-                else:
-                    return r'\0{0:o}'.format(c)
-            return r'\x{0:02x}'.format(c)
-        return re.sub('[\x00-\x1f\x7f-\xff](?=(.?))', escape, s)
-
-def shortest_string_repr(s, encoding):
-    """
-    Return the shortest representation of the string s suitable for a
-    Python source file in the given encoding. Generates up to eight ways
-    of representing the string and picks the shortest.
-    """
-    prefix = 'u' * isinstance(s, unicode)
-    candidates = []
-
-    # The constraints on r-prefixed strings are really quite tight:
-    #
-    # 1. Backslash-replacement must add no more backslashes when we come
-    #    to encode the output. (Otherwise we'll get something like r'\xa0'
-    #    which will be wrongly interpreted.)
-    # 2. The string contains none of the six escape sequences in _escape_set.
-    # 3. The string does not end with a backslash.
-    #
-    # Even if these three constraints are all met, we might still be
-    # unable to use a particular set of quotation marks: no set of
-    # quotes can be used if that set appears in the string, and newlines
-    # may not appear in single- or double-quoted strings.
-    s_encoded = encode_string(s, encoding, False)
-    if (s.count('\\') == s_encoded.count('\\')
-        and not set(s) & _escape_set
-        and s and s[-1] != '\\'):
-        for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
-            if q not in s:
-                candidates.append("{0}r{1}{2}{1}".format(prefix, q, s_encoded))
-
-    # Ordinary strings are easy.
-    for q in ("'''", '"""', "'", '"'):
-        s_encoded = encode_string(s, encoding, True, q)
-        candidates.append("{0}{1}{2}{1}".format(prefix, q, s_encoded))
-    return min(candidates, key=len)
+__all__ = 'serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
 
 class Assoc:
     Non = 0
@@ -125,6 +58,7 @@ class SerializeVisitor(NodeVisitor):
         self.indent = indent
         self.joinlines = joinlines
         self.selftest = selftest
+        self.unicode_literals = False
 
     def serialize(self, tree):
         self.lastchar = '\n'
@@ -557,6 +491,8 @@ class SerializeVisitor(NodeVisitor):
         for i, n in enumerate(node.names):
             self.comma(i)
             self.visit(n)
+            if node.module == '__future__' and n.name == 'unicode_literals':
+                self.unicode_literals = True
 
     def visit_Lambda(self, node):
         with SavePrecedence(self, Prec.Lambda, Assoc.Right):
@@ -669,8 +605,80 @@ class SerializeVisitor(NodeVisitor):
             if not isinstance(node.step, Name) or node.step.id != 'None':
                 self.visit(node.step)
 
+    _escape_sequences = [
+        ('\a', r'\a'),
+        ('\b', r'\b'),
+        ('\f', r'\f'),
+        ('\r', r'\r'),
+        ('\t', r'\t'),
+        ('\v', r'\v'),
+        ]
+    _escape_set = set(e[0] for e in _escape_sequences)
+
+    def encode_string(self, s, escapes=True, quotes=None):
+        if escapes:
+            s = s.replace('\\', '\\\\')
+            for e, f in self._escape_sequences:
+                s = s.replace(e, f)
+            if quotes:
+                if len(quotes) == 1:
+                    s = s.replace('\n', r'\n')
+                s = s.replace(quotes, '\\' + quotes)
+        def escape(m):
+            c = ord(m.group(0))
+            if c < 8 and (m.group(1) == '' or not m.group(1).isdigit()):
+                if c == 0:
+                    return r'\0'
+                else:
+                    return r'\0{0:o}'.format(c)
+            return r'\x{0:02x}'.format(c)
+        if isinstance(s, unicode):
+            s = re.sub('[\x00-\x1f](?=(.?))', escape, s)
+            return s.encode(self.encoding, 'backslashreplace')
+        else:
+            return re.sub('[\x00-\x1f\x7f-\xff](?=(.?))', escape, s)
+
+    def shortest_string_repr(self, s):
+        """
+        Return the shortest representation of the string s suitable for a
+        Python source file in self.encoding. Generates up to eight ways
+        of representing the string and picks the shortest.
+        """
+        if self.unicode_literals:
+            prefix = 'b' * isinstance(s, str)
+        else:
+            prefix = 'u' * isinstance(s, unicode)
+        cand = []               # List of candidate representation.
+
+        # The constraints on r-prefixed strings are really quite tight:
+        #
+        # 1. Backslash-replacement must add no more backslashes when we
+        #    come to encode the output. (Otherwise we'll get something
+        #    like r'\xa0' which will be wrongly interpreted.)
+        # 2. The string contains none of the six escape sequences in
+        #    _escape_set.
+        # 3. The string does not end with a backslash.
+        #
+        # Even if these three constraints are all met, we might still be
+        # unable to use a particular set of quotation marks: no set of
+        # quotes can be used if that set appears in the string, and
+        # newlines may not appear in single- or double-quoted strings.
+        s_encoded = self.encode_string(s, False)
+        if (s.count('\\') == s_encoded.count('\\')
+            and not set(s) & self._escape_set
+            and s and s[-1] != '\\'):
+            for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
+                if q not in s:
+                    cand.append("{0}r{1}{2}{1}".format(prefix, q, s_encoded))
+
+        # Ordinary strings are easy.
+        for q in ("'''", '"""', "'", '"'):
+            s_encoded = self.encode_string(s, True, q)
+            cand.append("{0}{1}{2}{1}".format(prefix, q, s_encoded))
+        return min(cand, key=len)
+
     def visit_Str(self, node):
-        self.emit(shortest_string_repr(node.s, self.encoding))
+        self.emit(self.shortest_string_repr(node.s))
 
     def visit_Subscript(self, node):
         with SavePrecedence(self, Prec.Attribute, Assoc.Left):
