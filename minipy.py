@@ -536,7 +536,8 @@ class SerializeVisitor(NodeVisitor):
             with SavePrecedence(self, 16):
                 self.emit(s)
         else:
-            self.emit(s)
+            with SavePrecedence(self, Prec.Attribute, Assoc.Right):
+                self.emit(s)
         self.lastnum = True
 
     def visit_Pass(self, node):
