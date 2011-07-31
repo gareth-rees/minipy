@@ -3,6 +3,7 @@
 
 from ast import *
 import imp
+import math
 import optparse
 import re
 import string
@@ -534,10 +535,16 @@ class SerializeVisitor(NodeVisitor):
         s = repr(node.n)
         if s[0] == '-':
             with SavePrecedence(self, 16):
-                self.emit(s)
+                if isinstance(node.n, float) and math.isinf(node.n):
+                    self.emit('-1e400')
+                else:
+                    self.emit(s)
         else:
             with SavePrecedence(self, Prec.Attribute, Assoc.Right):
-                self.emit(s)
+                if isinstance(node.n, float) and math.isinf(node.n):
+                    self.emit('1e400')
+                else:
+                    self.emit(s)
         self.lastnum = True
 
     def visit_Pass(self, node):
