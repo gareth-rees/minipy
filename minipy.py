@@ -486,6 +486,8 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_ImportFrom(self, node):
         self.emit('from')
+        if node.level:
+            self.emit('.' * node.level)
         self.emit(node.module)
         self.emit('import')
         for i, n in enumerate(node.names):
