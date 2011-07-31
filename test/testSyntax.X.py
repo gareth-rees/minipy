@@ -40,3 +40,9 @@ with a as b:
     pass
 with a as (b, c):
     pass
+with a, a:
+    pass
+with a as b, a as c:
+    pass
+with a as b, a:
+    pass

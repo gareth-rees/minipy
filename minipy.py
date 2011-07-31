@@ -759,12 +759,18 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_With(self, node):
         self.emit('with')
-        self.visit(node.context_expr)
-        if node.optional_vars:
-            self.emit('as')
-            with SavePrecedence(self, Prec.Tuple):
-                self.prec = Prec.Tuple
-                self.visit(node.optional_vars)
+        while True:
+            self.visit(node.context_expr)
+            if node.optional_vars:
+                self.emit('as')
+                with SavePrecedence(self, Prec.Tuple):
+                    self.prec = Prec.Tuple
+                    self.visit(node.optional_vars)
+            if len(node.body) == 1 and isinstance(node.body[0], With):
+                self.comma()
+                node = node.body[0]
+            else:
+                break
         self.visit_body(node.body)
 
     def visit_Yield(self, node):
