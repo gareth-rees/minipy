@@ -619,7 +619,7 @@ class SerializeVisitor(NodeVisitor):
         ]
     _escape_set = set(e[0] for e in _escape_sequences)
 
-    def encode_string(self, s, escapes=True, quotes=None):
+    def encode_string(self, s, escapes=True, quotes=None, error='backslashreplace'):
         if escapes:
             s = s.replace('\\', '\\\\')
             for e, f in self._escape_sequences:
@@ -638,7 +638,7 @@ class SerializeVisitor(NodeVisitor):
             return r'\x{0:02x}'.format(c)
         if isinstance(s, unicode):
             s = re.sub('[\x00-\x1f](?=(.?))', escape, s)
-            return s.encode(self.encoding, 'backslashreplace')
+            return s.encode(self.encoding, error)
         else:
             return re.sub('[\x00-\x1f\x7f-\xff](?=(.?))', escape, s)
 
@@ -667,13 +667,16 @@ class SerializeVisitor(NodeVisitor):
         # unable to use a particular set of quotation marks: no set of
         # quotes can be used if that set appears in the string, and
         # newlines may not appear in single- or double-quoted strings.
-        s_encoded = self.encode_string(s, False)
-        if (s.count('\\') == s_encoded.count('\\')
+
+        s1 = self.encode_string(s, escapes=False, error='ignore')
+        s2 = self.encode_string(s, escapes=False)
+        if (s.count('\\') == s1.count('\\')
+            and (prefix != 'u' or '\\u' not in s2)
             and not set(s) & self._escape_set
             and s and s[-1] != '\\'):
             for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
                 if q not in s:
-                    cand.append("{0}r{1}{2}{1}".format(prefix, q, s_encoded))
+                    cand.append("{0}r{1}{2}{1}".format(prefix, q, s2))
 
         # Ordinary strings are easy.
         for q in ("'''", '"""', "'", '"'):
