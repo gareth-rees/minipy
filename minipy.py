@@ -488,7 +488,8 @@ class SerializeVisitor(NodeVisitor):
         self.emit('from')
         if node.level:
             self.emit('.' * node.level)
-        self.emit(node.module)
+        if node.module:
+            self.emit(node.module)
         self.emit('import')
         for i, n in enumerate(node.names):
             self.comma(i)
