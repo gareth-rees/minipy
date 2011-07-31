@@ -14,8 +14,7 @@ __license__ = "GNU General Public License (GPL) Version 3"
 __author__ = 'Gareth Rees <http://garethrees.org/>'
 __all__ = 'shortest_string_repr serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
 
-escape_sequences = [
-    ('\0', r'\0'),
+_escape_sequences = [
     ('\a', r'\a'),
     ('\b', r'\b'),
     ('\f', r'\f'),
@@ -23,12 +22,12 @@ escape_sequences = [
     ('\t', r'\t'),
     ('\v', r'\v'),
     ]
-escape_set = set(e[0] for e in escape_sequences)
+_escape_set = set(e[0] for e in _escape_sequences)
 
 def encode_string(s, encoding, escapes=True, quotes=None):
     if escapes:
         s = s.replace('\\', '\\\\')
-        for e, f in escape_sequences:
+        for e, f in _escape_sequences:
             s = s.replace(e, f)
         if quotes:
             if len(quotes) == 1:
@@ -38,8 +37,14 @@ def encode_string(s, encoding, escapes=True, quotes=None):
         return s.encode(encoding, 'backslashreplace')
     else:
         def escape(m):
-            return r'\x{0:02x}'.format(ord(m.group(0)))
-        return re.sub('[\x00-\x1f\x7f-\xff]', escape, s)
+            c = ord(m.group(0))
+            if c < 8 and (m.group(1) == '' or not m.group(1).isdigit()):
+                if c == 0:
+                    return r'\0'
+                else:
+                    return r'\0{0:o}'.format(c)
+            return r'\x{0:02x}'.format(c)
+        return re.sub('[\x00-\x1f\x7f-\xff](?=(.?))', escape, s)
 
 def shortest_string_repr(s, encoding):
     """
@@ -55,7 +60,7 @@ def shortest_string_repr(s, encoding):
     # 1. Backslash-replacement must add no more backslashes when we come
     #    to encode the output. (Otherwise we'll get something like r'\xa0'
     #    which will be wrongly interpreted.)
-    # 2. The string contains none of the six escape sequences in escape_set.
+    # 2. The string contains none of the six escape sequences in _escape_set.
     # 3. The string does not end with a backslash.
     #
     # Even if these three constraints are all met, we might still be
@@ -64,7 +69,7 @@ def shortest_string_repr(s, encoding):
     # may not appear in single- or double-quoted strings.
     s_encoded = encode_string(s, encoding, False)
     if (s.count('\\') == s_encoded.count('\\')
-        and not set(s) & escape_set
+        and not set(s) & _escape_set
         and s and s[-1] != '\\'):
         for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
             if q not in s:
