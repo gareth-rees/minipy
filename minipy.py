@@ -681,7 +681,7 @@ class SerializeVisitor(NodeVisitor):
         s1 = self.encode_string(s, escapes=False, error='ignore')
         s2 = self.encode_string(s, escapes=False)
         if (s.count('\\') == s1.count('\\')
-            and (prefix != 'u' or '\\u' not in s2)
+            and (prefix != 'u' or '\\u' not in s2 and '\\U' not in s2)
             and not set(s) & self._escape_set
             and s and s[-1] != '\\'):
             for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
