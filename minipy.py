@@ -25,11 +25,21 @@ escape_sequences = [
     ]
 escape_set = set(e[0] for e in escape_sequences)
 
-def encode(s, encoding, error):
-    try:
-        return s.encode(encoding, error)
-    except UnicodeDecodeError:
-        return repr(s)[1:-1]
+def encode_string(s, encoding, escapes=True, quotes=None):
+    if escapes:
+        s = s.replace('\\', '\\\\')
+        for e, f in escape_sequences:
+            s = s.replace(e, f)
+        if quotes:
+            if len(quotes) == 1:
+                s = s.replace('\n', r'\n')
+            s = s.replace(quotes, '\\' + quotes)
+    if isinstance(s, unicode):
+        return s.encode(encoding, 'backslashreplace')
+    else:
+        def escape(m):
+            return r'\x{0:02x}'.format(ord(m.group(0)))
+        return re.sub('[\x00-\x1f\x7f-\xff]', escape, s)
 
 def shortest_string_repr(s, encoding):
     """
@@ -37,12 +47,7 @@ def shortest_string_repr(s, encoding):
     Python source file in the given encoding. Generates up to eight ways
     of representing the string and picks the shortest.
     """
-    prefix = ''
-    if isinstance(s, unicode):
-        try:
-            s.encode('ascii')
-        except UnicodeEncodeError:
-            prefix = 'u'
+    prefix = 'u' * isinstance(s, unicode)
     candidates = []
 
     # The constraints on r-prefixed strings are really quite tight:
@@ -57,22 +62,18 @@ def shortest_string_repr(s, encoding):
     # unable to use a particular set of quotation marks: no set of
     # quotes can be used if that set appears in the string, and newlines
     # may not appear in single- or double-quoted strings.
-    if (s.count('\\') == encode(s, encoding, 'backslashreplace').count('\\')
+    s_encoded = encode_string(s, encoding, False)
+    if (s.count('\\') == s_encoded.count('\\')
         and not set(s) & escape_set
         and s and s[-1] != '\\'):
         for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
             if q not in s:
-                candidates.append("{0}r{1}{2}{1}".format(prefix, q, s))
+                candidates.append("{0}r{1}{2}{1}".format(prefix, q, s_encoded))
 
     # Ordinary strings are easy.
     for q in ("'''", '"""', "'", '"'):
-        t = s.replace('\\', '\\\\')
-        for e, f in escape_sequences:
-            t = t.replace(e, f)
-        if len(q) == 1:
-            t = t.replace('\n', r'\n')
-        t = t.replace(q, '\\' + q)
-        candidates.append("{0}{1}{2}{1}".format(prefix, q, t))
+        s_encoded = encode_string(s, encoding, True, q)
+        candidates.append("{0}{1}{2}{1}".format(prefix, q, s_encoded))
     return min(candidates, key=len)
 
 class Assoc:
@@ -193,8 +194,8 @@ class SerializeVisitor(NodeVisitor):
     def idchar(self, c):
         return c.isalnum() or c == '_'
 
-    def emit_raw(self, s, escape='strict'):
-        self.result.append(encode(s, self.encoding, escape))
+    def emit_raw(self, s):
+        self.result.append(s)
 
     def space_needed(self, s):
         if not self.idchar(self.lastchar) or not self.idchar(s[0]):
@@ -207,11 +208,11 @@ class SerializeVisitor(NodeVisitor):
             return False
         return True
 
-    def emit(self, s, emit=True, escape='strict'):
+    def emit(self, s, emit=True):
         if emit:
             if self.space_needed(s):
                 self.emit_raw(' ')
-            self.emit_raw(s, escape)
+            self.emit_raw(s)
             self.lastchar = s[-1]
             self.lastemit = s
             self.lastnum = False
@@ -663,8 +664,7 @@ class SerializeVisitor(NodeVisitor):
                 self.visit(node.step)
 
     def visit_Str(self, node):
-        self.emit(shortest_string_repr(node.s, self.encoding),
-                  escape='backslashreplace')
+        self.emit(shortest_string_repr(node.s, self.encoding))
 
     def visit_Subscript(self, node):
         with SavePrecedence(self, Prec.Attribute, Assoc.Left):

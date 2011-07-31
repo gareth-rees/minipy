@@ -158,3 +158,8 @@ a ** b . c -> a**b.c
 '\\\\\'' -> r"\\'"
 r'' -> ''
 '\0' -> '\0'
+'\x00' -> '\0'
+'\x00\x00\xfe\xff' -> '\0\0\xfe\xff'
+'\a\b\n\r\t\v' -> '\a\b\n\r\t\v'
+'\x7f\a\b\n\r\t\v' -> '\x7f\a\b\n\r\t\v'
+u'\x7f\a\b\n\r\t\v' -> u'\a\b\n\r\t\v'
