@@ -478,7 +478,7 @@ class SerializeVisitor(NodeVisitor):
         self.visit_orelse(node)
 
     def visit_IfExp(self, node):
-        with SavePrecedence(self, Prec.Lambda, True):
+        with SavePrecedence(self, Prec.Lambda, Assoc.Right):
             self.prec = Prec.Or
             self.visit(node.body)
             self.emit('if')
@@ -486,6 +486,7 @@ class SerializeVisitor(NodeVisitor):
             if node.orelse:
                 self.emit('else')
                 self.prec = Prec.Lambda
+                self.assoc = Assoc.Right
                 self.visit(node.orelse)
 
     def visit_Import(self, node):
@@ -544,7 +545,7 @@ class SerializeVisitor(NodeVisitor):
         s = repr(node.n)
         sign = ''
         prec = Prec.Attribute
-        if self.operator == '-':
+        if self.selftest and self.operator == '-':
             prec = 14           # -(1), not -1: see issue #38.
         if s[0] == '-':
             sign = '-'

@@ -21,8 +21,9 @@ lambda a : (b or c) -> lambda a:b or c
 lambda (a, b): (1, 2, 3) -> lambda(a,b):(1,2,3)
 (lambda a: (lambda b: (lambda c: (d)))) -> lambda a:lambda b:lambda c:d
 a if b else c -> a if b else c
-a if b else (c if d else e) -> a if b else(c if d else e)
+a if b else (c if d else e) -> a if b else c if d else e
 (a if b else c) if d else e -> (a if b else c)if d else e
+a if b else c if d else e -> a if b else c if d else e
 0 if 0 else 0 -> 0if 0 else 0
 1 if 1 else 1 -> 1if 1 else 1
 v0 if v0 else v0 -> v0 if v0 else v0
