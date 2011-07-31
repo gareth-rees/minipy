@@ -627,7 +627,10 @@ class SerializeVisitor(NodeVisitor):
             if quotes:
                 if len(quotes) == 1:
                     s = s.replace('\n', r'\n')
+                elif s and s[-1] == quotes[0]:
+                    s = s[:-1] + '\\' + s[-1]
                 s = s.replace(quotes, '\\' + quotes)
+                
         def escape(m):
             c = ord(m.group(0))
             if c < 8 and (m.group(1) == '' or not m.group(1).isdigit()):
@@ -675,7 +678,7 @@ class SerializeVisitor(NodeVisitor):
             and not set(s) & self._escape_set
             and s and s[-1] != '\\'):
             for q in ("'''", '"""') + ("'", '"') * ('\n' not in s):
-                if q not in s:
+                if q not in s and not (s and q[0] == s[-1]):
                     cand.append("{0}r{1}{2}{1}".format(prefix, q, s2))
 
         # Ordinary strings are easy.
