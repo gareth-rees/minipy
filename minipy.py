@@ -72,7 +72,7 @@ class SerializeVisitor(NodeVisitor):
         result = ''.join(self.result)
         if not self.docstrings and self.selftest:
             original = dump(tree)
-            minified = dump(parse(result))
+            minified = dump(parse(result.decode(self.encoding)))
             if original != minified:
                 sys.stderr.write("RESULT\n{3}\n{0}\n\n"
                                  "ORIGINAL\n{3}\n{1}\n\n"
