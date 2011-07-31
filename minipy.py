@@ -531,12 +531,12 @@ class SerializeVisitor(NodeVisitor):
         self.emit(node.id)
 
     def visit_Num(self, node):
-        if node.n >= 0:
-            self.emit(repr(node.n))
-        else:
+        s = repr(node.n)
+        if s[0] == '-':
             with SavePrecedence(self, 16):
-                self.prec = 16
-                self.emit(repr(node.n))
+                self.emit(s)
+        else:
+            self.emit(s)
         self.lastnum = True
 
     def visit_Pass(self, node):
