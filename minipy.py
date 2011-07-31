@@ -762,7 +762,9 @@ class SerializeVisitor(NodeVisitor):
         self.visit(node.context_expr)
         if node.optional_vars:
             self.emit('as')
-            self.visit(node.optional_vars)
+            with SavePrecedence(self, Prec.Tuple):
+                self.prec = Prec.Tuple
+                self.visit(node.optional_vars)
         self.visit_body(node.body)
 
     def visit_Yield(self, node):

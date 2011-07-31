@@ -10,4 +10,6 @@ finally:pass
 if a:pass
 elif b:pass
 else:pass
+with a:pass
 with a as b:pass
+with a as(b,c):pass

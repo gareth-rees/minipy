@@ -34,5 +34,9 @@ elif b:
 else:
     pass
 
+with a:
+    pass
 with a as b:
+    pass
+with a as (b, c):
     pass
