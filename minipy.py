@@ -91,10 +91,11 @@ class Prec:
     Max = 18
 
 class SavePrecedence:
-    def __init__(self, visitor, prec=Prec.Max, assoc=Assoc.Non):
+    def __init__(self, visitor, prec=Prec.Max, assoc=Assoc.Non, force=False):
         self.v = visitor
         self.new_prec = prec
-        self.paren = (prec < self.v.prec
+        self.paren = (force
+                      or prec < self.v.prec
                       or prec == self.v.prec
                       and (self.v.assoc == Assoc.Non
                            or self.v.assoc != assoc))
@@ -704,7 +705,7 @@ class SerializeVisitor(NodeVisitor):
             self.visit_body(node.finalbody)
 
     def visit_Tuple(self, node):
-        with SavePrecedence(self, Prec.Tuple):
+        with SavePrecedence(self, Prec.Tuple, force=not node.elts):
             self.prec = Prec.Tuple
             for i, e in enumerate(node.elts):
                 self.comma(i)
