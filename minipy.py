@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from ast import *
+from collections import defaultdict
 import imp
-import keyword
+from keyword import iskeyword
 import math
 import optparse
 import re
-import string
+from string import ascii_lowercase, ascii_uppercase
 import sys
 
 __version__ = '0.1'
@@ -842,60 +843,118 @@ def reserved_names_in_ast(tree):
     """
     return FindReserved().reserve(tree)
 
-class RenameVisitor(NodeTransformer):
-    def __init__(self, reserved=set()):
-        self.name = {}
-        self.n = 0
-        self.reserved = set(__builtins__.__dict__)
-        self.reserved.update(reserved)
+class Rename(NodeTransformer):
+    def __init__(self, mapping):
+        self.mapping = mapping
 
-    def learn(self, name):
-        if name is None or name[:2] == '__' or name in self.reserved:
-            return name
-        while name not in self.name:
-            newname = ''
-            n = self.n + 1
-            while n:
-                n = n - 1
-                newname = string.ascii_lowercase[n % 26] + newname
-                n //= 26
-            self.n += 1
-            if newname not in self.reserved and not keyword.iskeyword(newname):
-                self.name[name] = newname
-        return self.name[name]
+    def rename(self, name):
+        return self.mapping.get(name, name)
 
     def visit_alias(self, node):
-        node.asname = self.learn(node.asname)
+        node.asname = self.rename(node.asname)
         return self.generic_visit(node)
 
     def visit_Call(self, node):
         for i, k in enumerate(node.keywords):
-            node.keywords[i].arg = self.learn(node.keywords[i].arg)
+            node.keywords[i].arg = self.rename(node.keywords[i].arg)
         return self.generic_visit(node)
 
     def visit_ClassDef(self, node):
-        node.name = self.learn(node.name)
+        node.name = self.rename(node.name)
         return self.generic_visit(node)
 
     def visit_FunctionDef(self, node):
-        node.name = self.learn(node.name)
+        node.name = self.rename(node.name)
         return self.generic_visit(node)
 
     def visit_Global(self, node):
-        for i in node.names:
-            node.names[i] = self.learn(node.names[i])
+        for i, n in enumerate(node.names):
+            node.names[i] = self.rename(n)
         return self.generic_visit(node)        
 
     def visit_Name(self, node):
-        node.id = self.learn(node.id)
+        node.id = self.rename(node.id)
         return self.generic_visit(node)
+
+class FindNames(NodeVisitor):
+    def newname(self):
+        result = [0, self.count]
+        self.count += 1
+        return result
+
+    def find(self, tree):
+        """
+        Find names in an abstract syntax tree and return a dictionary
+        mapping names to pairs [n, m] where n is the number of
+        occurrences of the name, and m is the number of distinct names
+        that appear prior to this one.
+        """
+        self.count = 0
+        self.name = defaultdict(self.newname)
+        self.visit(tree)
+        return self.name
+
+    def learn(self, name):
+        self.name[name][0] += 1
+
+    def visit_alias(self, node):
+        self.learn(node.asname)
+        self.generic_visit(node)
+
+    def visit_Call(self, node):
+        for k in node.keywords:
+            self.learn(k)
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node):
+        self.learn(node.name)
+        self.generic_visit(node)
+
+    def visit_FunctionDef(self, node):
+        self.learn(node.name)
+        self.generic_visit(node)
+
+    def visit_Global(self, node):
+        for n in node.names:
+            self.learn(n)
+        self.generic_visit(node)        
+
+    def visit_Name(self, node):
+        self.learn(node.id)
+        self.generic_visit(node)
+
+letters = ascii_lowercase + ascii_uppercase
+letters_len = len(letters)
+def make_name(n):
+    """Return the nth name."""
+    name = ''
+    n += 1
+    while n:
+        n -= 1
+        name = letters[n % letters_len] + name
+        n //= letters_len
+    return name
 
 def rename_ast(tree, reserved=set()):
     """
     Change all names in an abstract syntax tree, except for a set of
     reserved names. The new names are as short as possible.
     """
-    RenameVisitor(reserved).visit(tree)
+    names = FindNames().find(tree)
+    mapping = dict()
+    n = [0] * 3
+    sorted_names = sorted(((i, j, k) for k, (i, j) in names.items()),
+                          key = lambda (i, j, k): (-i, j, k))
+    for _, _, name in sorted_names:
+        if name is None or name[:2] == name[-2:] == '__' or name in reserved:
+            continue
+        underscores = name.startswith('_') + name.startswith('__')
+        while name not in mapping:
+            newname = '_' * underscores + make_name(n[underscores])
+            n[underscores] += 1
+            if newname not in reserved and not iskeyword(newname):
+                mapping[name] = newname
+    Rename(mapping).visit(tree)
 
 def detect_encoding(filename):
     """
