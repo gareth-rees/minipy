@@ -1007,7 +1007,8 @@ def main():
                  help="output file (default: stdout)")
     p.add_option('--docstrings', '-D', 
                  action='store_true', default=False,
-                 help="remove docstrings (implies --noselftest)")
+                 help="remove docstrings and other statements with no side effects "
+                 "(implies --noselftest)")
     p.add_option('--rename', '-R', 
                  action='store_true', default=False,
                  help="aggressively rename non-preserved variables")
