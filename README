@@ -107,8 +107,23 @@ The following names are preserved when renaming:
 * Any name in the list assigned to the __all__ global variable.
 
 
+LICENSE
+-------
+
+minipy is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+General Public License for more details. [3]
+
+
 REFERENCES
 ----------
 
 [1] <https://github.com/gareth-rees/minipy/issues?state=closed>
 [2] <https://github.com/gareth-rees/minipy/issues/new>
+[3] <http://www.gnu.org/copyleft/gpl.html>
