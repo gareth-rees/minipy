@@ -8,10 +8,12 @@ import re
 from string import ascii_lowercase, ascii_uppercase
 from sys import stderr, stdout
 
+__author__ = __maintainer__ = 'Gareth Rees'
+__email__ = 'gdr@garethrees.org'
+__license__ = "GNU General Public License (GPL) Version 3"
+__status__ = 'Development'
 __version__ = '0.1'
 __version_info__ = (0, 1)
-__license__ = "GNU General Public License (GPL) Version 3"
-__author__ = 'Gareth Rees <http://garethrees.org/>'
 __all__ = 'serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
 
 class Assoc:
