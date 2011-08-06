@@ -56,12 +56,42 @@ Options:
   --debug               dump the parse tree
 
 
+THE SELF-TEST
+-------------
+
+Generating minified source code without accidentally changing the
+meaning is tricky: see the list of issues [1] for many awkward cases
+that had to be fixed. Therefore, in its default operating mode, minipy
+performs a “self-test”: it takes the minified code, re-parses it, and
+asserts that the parse tree for the minified code is identical to the
+parse tree for the original code. If the self-test passes, then you can
+be highly confident that minipy has not changed the meaning of your
+code.
+
+In order to pass the self-test, minipy must eschew a few changes to the
+code that result in harmless changes to the parse tree. These changes
+are:
+
+* Replacing “pass” with “0”.
+* Replacing “-(1)” with “-1”.
+
+You can use the --noselftest option to enable these changes, but by
+disabling the self-test you accept a small risk of a bug in minipy
+changing the meaning of your code.
+
+The optional transformations --rename and --docstrings can’t be combined
+with the self-test, so these options imply --noselftest.
+
+Please report all self-test failures [2], attaching the code that causes
+the failure.
+
+
 RENAMING
 --------
 
-Python's use of introspection and duck typing means that it is not
+Python’s use of introspection and duck typing means that it is not
 possible to change names in a program without risk of changing the
-meaning. The --rename option to minipy therefore makes a "best attempt"
+meaning. The --rename option to minipy therefore makes a “best attempt”
 to discover names that need to be preserved, but does not guarantee
 anything. Use at your own risk!
 
@@ -73,5 +103,12 @@ The following names are preserved when renaming:
 * Any name used as an attribute (.join, .index, .copy, .sort, ...).
 * Any name starting with two underscores.
 * The names of all imported modules.
-* Any name exported by a module in a "from module import *" statement.
+* Any name exported by a module in a “from module import *” statement.
 * Any name in the list assigned to the __all__ global variable.
+
+
+REFERENCES
+----------
+
+[1] <https://github.com/gareth-rees/minipy/issues?state=closed>
+[2] <https://github.com/gareth-rees/minipy/issues/new>
