@@ -9,6 +9,15 @@ a((b,c)) -> a((b,c))
 ((a, b) for (c, d) in (e, f)) -> ((a,b)for c,d in(e,f))
 (a for b in c for d in e if f) -> (a for b in c for d in e if f)
 a, (b for c in d), e -> a,(b for c in d),e
+[ (a, b) ] -> [(a,b)]
+[ (a, b), c ] -> [(a,b),c]
+[ (lambda : a), (lambda : b) ] -> [lambda:a,lambda:b]
+{ (a, b) } -> {(a,b)}
+{ (a, b), c } -> {(a,b),c}
+{ (lambda : a), (lambda : b) } -> {lambda:a,lambda:b}
+{ (a, b) : (c, d) } -> {(a,b):(c,d)}
+{ (a, b) : (c, d), e : f } -> {(a,b):(c,d),e:f}
+{ (lambda : a) : (lambda : b) } -> {lambda:a:lambda:b}
 () -> ()
 ( ) -> ()
 a, -> a,

@@ -2,14 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from ast import *
-from collections import defaultdict
-import imp
-from keyword import iskeyword
-import math
-import optparse
+from imp import find_module, load_module
+from math import isinf
 import re
 from string import ascii_lowercase, ascii_uppercase
-import sys
+from sys import stderr, stdout
 
 __version__ = '0.1'
 __version_info__ = (0, 1)
@@ -32,6 +29,12 @@ class Prec:
     Max = 18
 
 class SavePrecedence:
+    """
+    Context manager class that saves and restores the precedence and
+    associativity for a SerializeVisitor instance, and emits a pair of
+    parentheses if necessary to preserve the meaning.
+    """
+
     def __init__(self, visitor, prec=Prec.Max, assoc=Assoc.Non, force=False):
         self.v = visitor
         self.new_prec = prec
@@ -67,6 +70,13 @@ class SerializeVisitor(NodeVisitor):
         self.selftest = selftest
         self.unicode_literals = False
 
+    def selftest_failure(self, result, original, minified):
+        import difflib
+        return ("RESULT\n{3}\n{0}\n\n"
+                "ORIGINAL\n{3}\n{1}\n\n"
+                "MINIFIED\n{3}\n{2}\n"
+                .format(result, original, minified, '-' * 72))
+
     def serialize(self, tree):
         self.lastchar = '\n'
         self.lastemit = '\n'
@@ -82,11 +92,7 @@ class SerializeVisitor(NodeVisitor):
             original = dump(tree)
             minified = dump(parse(result.decode(self.encoding)))
             if original != minified:
-                sys.stderr.write("RESULT\n{3}\n{0}\n\n"
-                                 "ORIGINAL\n{3}\n{1}\n\n"
-                                 "MINIFIED\n{3}\n{2}\n"
-                                 .format(result, original, minified, '-' * 72))
-                raise AssertionError
+                raise AssertionError, self.selftest_failure(result, original, minified)
         return result
 
     ops = {
@@ -553,7 +559,7 @@ class SerializeVisitor(NodeVisitor):
             sign = '-'
             prec = 16
         with SavePrecedence(self, prec, Assoc.Right):
-            if isinstance(node.n, float) and math.isinf(node.n):
+            if isinstance(node.n, float) and isinf(node.n):
                 self.emit(sign + '1e400')
             else:
                 self.emit(s)
@@ -795,7 +801,15 @@ class SerializeVisitor(NodeVisitor):
 def serialize_ast(tree, **kwargs):
     """
     Serialize an abstract syntax tree according to the options and
-    return an encoded string.
+    return an encoded string. Takes keyword arguments:
+
+    docstrings -- Remove docstrings and other statements with no side
+                  effects (default: False)
+    encoding   -- Encoding for the result (default: 'latin1')
+    indent     -- Number of spaces for each indentation level (default: 1)
+    joinlines  -- Join lines if possible (default: True)
+    selftest   -- Reparse the result and check that it's identical to the
+                  tree (default: True)
     """
     return SerializeVisitor(**kwargs).serialize(tree)
 
@@ -808,7 +822,7 @@ class FindReserved(NodeVisitor):
     def reserve_import(self, n):
         self.reserved.add(n)
         try:
-            self.reserved.update(dir(imp.load_module(n, *imp.find_module(n))))
+            self.reserved.update(dir(load_module(n, *find_module(n))))
         except:
             pass
 
@@ -889,8 +903,9 @@ class FindNames(NodeVisitor):
         occurrences of the name, and m is the number of distinct names
         that appear prior to this one.
         """
-        self.count = 0
+        from collections import defaultdict
         self.name = defaultdict(self.newname)
+        self.count = 0
         self.visit(tree)
         return self.name
 
@@ -940,6 +955,7 @@ def rename_ast(tree, reserved=set()):
     Change all names in an abstract syntax tree, except for a set of
     reserved names. The new names are as short as possible.
     """
+    from keyword import iskeyword
     names = FindNames().find(tree)
     mapping = dict()
     n = [0] * 3
@@ -982,6 +998,7 @@ def detect_encoding(filename):
 
 def main():
     # Handle command-line arguments.
+    import optparse
     p = optparse.OptionParser(usage="usage: %prog [options] [-o OUTPUT] FILE",
                               version='%prog {0}'.format(__version__))
     p.add_option('--output', '-o', 
@@ -1014,8 +1031,8 @@ def main():
     encoding, preserve = detect_encoding(args[0])
     tree = parse(open(args[0]).read())
     if opts.debug:
-        sys.stderr.write(dump(tree))
-        sys.stderr.write('\n')
+        stderr.write(dump(tree))
+        stderr.write('\n')
     if opts.rename:
         r = reserved_names_in_ast(tree)
         if opts.preserve:
@@ -1027,7 +1044,7 @@ def main():
     if opts.output:
         out = open(opts.output, 'wb')
     else:
-        out = sys.stdout
+        out = stdout
     out.write(preserve)
     out.write(minified)
     out.write('\n')
