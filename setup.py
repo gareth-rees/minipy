@@ -22,4 +22,9 @@ setup(
     py_modules = ['minipy', 'test_minipy'],
     url = 'https://github.com/gareth-rees/minipy',
     version = minipy.__version__,
+    entry_points = {
+        'console_scripts': [
+            'minipy = minipy:main',
+        ]
+    }
 )
