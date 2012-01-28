@@ -12,8 +12,8 @@ __author__ = __maintainer__ = 'Gareth Rees'
 __email__ = 'gdr@garethrees.org'
 __license__ = "GNU General Public License (GPL) Version 3"
 __status__ = 'Development'
-__version__ = '0.1'
-__version_info__ = (0, 1)
+__version_info__ = (0, 2)
+__version__ = '{0}.{1}'.format(*__version_info__)
 __all__ = 'serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
 
 class Assoc:
