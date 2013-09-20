@@ -817,7 +817,7 @@ def serialize_ast(tree, **kwargs):
 
 class FindReserved(NodeVisitor):
     def reserve(self, tree):
-        self.reserved = set()
+        self.reserved = set(__builtins__.__dict__)
         self.visit(tree)
         return self.reserved
 
