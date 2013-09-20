@@ -837,9 +837,15 @@ class FindReserved(NodeVisitor):
             and node.targets[0].id == '__all__'):
             expr = copy_location(Expression(node.value), node)
             self.reserved.update(eval(compile(expr, '<string>', 'eval')))
+        self.generic_visit(node)
 
     def visit_Attribute(self, node):
         self.reserved.add(node.attr)
+        self.generic_visit(node)
+
+    def visit_Call(self, node):
+        for k in node.keywords:
+            self.reserved.add(k.arg)
         self.generic_visit(node)
 
     def visit_Import(self, node):
@@ -871,8 +877,8 @@ class Rename(NodeTransformer):
         return self.generic_visit(node)
 
     def visit_Call(self, node):
-        for i, k in enumerate(node.keywords):
-            node.keywords[i].arg = self.rename(node.keywords[i].arg)
+        for k in node.keywords:
+            k.arg = self.rename(k.arg)
         return self.generic_visit(node)
 
     def visit_ClassDef(self, node):
@@ -920,7 +926,7 @@ class FindNames(NodeVisitor):
 
     def visit_Call(self, node):
         for k in node.keywords:
-            self.learn(k)
+            self.learn(k.arg)
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):

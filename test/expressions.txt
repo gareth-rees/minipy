@@ -6,6 +6,7 @@ a ( b ) -> a(b)
 a((b)) -> a(b)
 a((b,)) -> a((b,))
 a((b,c)) -> a((b,c))
+a( b = c , d = e ) -> a(b=c,d=e)
 ((a, b) for (c, d) in (e, f)) -> ((a,b)for c,d in(e,f))
 (a for b in c for d in e if f) -> (a for b in c for d in e if f)
 a, (b for c in d), e -> a,(b for c in d),e
