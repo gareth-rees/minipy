@@ -234,7 +234,7 @@ class SerializeVisitor(NodeVisitor):
             self.newline()
         prev_multiline = False
         statements = 0
-        for i, b in enumerate(body):
+        for b in body:
             if self.docstrings and self.no_side_effects(b):
                 continue
             cur_multiline = self.multiline(b)
@@ -326,7 +326,7 @@ class SerializeVisitor(NodeVisitor):
             self.operator = name
             for i, v in enumerate(node.values):
                 self.emit(name, i)
-                self.visit(node.values[i])
+                self.visit(v)
                 self.assoc = Assoc.Right
 
     def visit_Break(self, node):
