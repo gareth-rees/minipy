@@ -894,6 +894,11 @@ class Rename(NodeTransformer):
             node.names[i] = self.rename(n)
         return self.generic_visit(node)        
 
+    def visit_arguments(self, node):
+        node.vararg = self.rename(node.vararg)
+        node.kwarg = self.rename(node.kwarg)
+        return self.generic_visit(node)
+
     def visit_Name(self, node):
         node.id = self.rename(node.id)
         return self.generic_visit(node)
