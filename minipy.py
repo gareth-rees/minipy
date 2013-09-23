@@ -14,7 +14,7 @@ __license__ = "GNU General Public License (GPL) Version 3"
 __status__ = 'Development'
 __version_info__ = (0, 2)
 __version__ = '{0}.{1}'.format(*__version_info__)
-__all__ = 'serialize_ast reserved_names_in_ast rename_ast detect_encoding'.split()
+__all__ = 'serialize_ast reserved_names_in_ast rename_ast detect_encoding minify'.split()
 
 class Assoc:
     Non = 0
@@ -817,7 +817,8 @@ def serialize_ast(tree, **kwargs):
 
 class FindReserved(NodeVisitor):
     def reserve(self, tree):
-        self.reserved = set(__builtins__.__dict__)
+        import __builtin__
+        self.reserved = set(dir(__builtin__))
         self.visit(tree)
         return self.reserved
 
@@ -989,27 +990,60 @@ def detect_encoding(filename):
     is text that must be copied to the transformed file: the #! line, if
     any, and the line containing the encoding cookie, if any.
     """
-    preserve = ''
+    copied = ''
     coding_re = re.compile("#.*coding[:=]\s*([-\w.]+)")
     with open(filename, 'rb') as f:
         first = f.readline()
         m = coding_re.search(first)
         if first[:2] == '#!' or m:
-            preserve = first
+            copied = first
         if not m:
             second = f.readline()
             m = coding_re.search(second)
             if m:
-                preserve += second
+                copied += second
         encoding = m.group(1) if m else 'latin1'
-        return encoding, preserve
+        return encoding, copied
+
+def minify(filename, debug=False, preserve='', output=stdout, rename=False,
+           **kwargs):
+    """
+    Read Python code from the file named by the first argument, and
+    write a minified version to standard output. Takes keyword
+    arguments:
+
+    debug    -- Dump the parse tree to stderr (default: False)
+    preserve -- String containing additional names to preserve (when
+                rename=True), joined by commas (default: the empty
+                string, meaning preserve no additional names)
+    output   -- File to write output to, or filename (default: stdout)
+    rename   -- Rename non-preserved variables (default: False)
+
+    The remaining keyword arguments are passed to serialize_ast.
+    """
+    encoding, copied = detect_encoding(filename)
+    tree = parse(open(filename).read())
+    if debug:
+        stderr.write(dump(tree))
+        stderr.write('\n')
+    if rename:
+        r = reserved_names_in_ast(tree)
+        if preserve:
+            r.update(preserve.split(','))
+        rename_ast(tree, r)
+    minified = serialize_ast(tree, encoding=encoding, **kwargs)
+    if not hasattr(output, 'write'):
+        output = open(output, 'wb')
+    output.write(copied)
+    output.write(minified)
+    output.write('\n')
 
 def main():
     # Handle command-line arguments.
     import optparse
     p = optparse.OptionParser(usage="usage: %prog [options] [-o OUTPUT] FILE",
                               version='%prog {0}'.format(__version__))
-    p.add_option('--output', '-o', 
+    p.add_option('--output', '-o', default=stdout,
                  help="output file (default: stdout)")
     p.add_option('--docstrings', '-D', 
                  action='store_true', default=False,
@@ -1035,28 +1069,7 @@ def main():
     opts, args = p.parse_args()
     if len(args) != 1:
         p.error("missing FILE")
-
-    # Read input and minify.
-    encoding, preserve = detect_encoding(args[0])
-    tree = parse(open(args[0]).read())
-    if opts.debug:
-        stderr.write(dump(tree))
-        stderr.write('\n')
-    if opts.rename:
-        r = reserved_names_in_ast(tree)
-        if opts.preserve:
-            r.update(opts.preserve.split(','))
-        rename_ast(tree, r)
-    minified = serialize_ast(tree, encoding=encoding, **opts.__dict__)
-
-    # Output.
-    if opts.output:
-        out = open(opts.output, 'wb')
-    else:
-        out = stdout
-    out.write(preserve)
-    out.write(minified)
-    out.write('\n')
+    minify(args[0], **opts.__dict__)
 
 if __name__ == '__main__':
     main()
