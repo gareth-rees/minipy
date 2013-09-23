@@ -874,7 +874,13 @@ class Rename(NodeTransformer):
         return self.mapping.get(name, name)
 
     def visit_alias(self, node):
-        node.asname = self.rename(node.asname)
+        # Add an alias if the imported module has an entry in the
+        # mapping. See rename_ast below for the logic behind the
+        # selection of modules to rename.
+        if node.asname is None and node.name in self.mapping:
+            node.asname = self.rename(node.name)
+        else:
+            node.asname = self.rename(node.asname)
         return self.generic_visit(node)
 
     def visit_arguments(self, node):
@@ -912,21 +918,25 @@ class FindNames(NodeVisitor):
 
     def find(self, tree):
         """
-        Find names in an abstract syntax tree and return a dictionary
-        mapping names to pairs [n, m] where n is the number of
-        occurrences of the name, and m is the number of distinct names
-        that appear prior to this one.
+        Find names in an abstract syntax tree and return two values. The
+        first is a dictionary mapping names to pairs [n, m] where n is
+        the number of occurrences of the name, and m is the number of
+        distinct names that appear prior to this one. The second is a
+        set of "bare" imports: that is, imports without an "as" clause.
         """
         from collections import defaultdict
         self.name = defaultdict(self.newname)
+        self.imports = set()
         self.count = 0
         self.visit(tree)
-        return self.name
+        return self.name, self.imports
 
     def learn(self, name):
         self.name[name][0] += 1
 
     def visit_alias(self, node):
+        if node.asname is None:
+            self.imports.add(node.name)
         self.learn(node.asname)
         self.generic_visit(node)
 
@@ -975,7 +985,15 @@ def rename_ast(tree, reserved=set()):
     reserved names. The new names are as short as possible.
     """
     from keyword import iskeyword
-    names = FindNames().find(tree)
+    names, imports = FindNames().find(tree)
+
+    # Add aliases for import statements if there are enough uses to
+    # justify the transformation. See Rename.visit_alias for the
+    # insertion of the aliases.
+    for module in imports:
+        if (len(module) - 1) * names[module][0] > 5:
+            reserved.remove(module)
+
     mapping = dict()
     n = [0] * 3
     sorted_names = sorted(((i, j, k) for k, (i, j) in names.items()),

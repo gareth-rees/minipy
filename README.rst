@@ -96,7 +96,6 @@ The following names are preserved when renaming:
 * Built-in names (``abs``, ``all``, ``any``, ``apply``, ...).
 * Any name used as an attribute (``.join``, ``.index``, ``.copy``, ``.sort``, ...).
 * Any name starting and ending with two underscores.
-* The names of all imported modules.
 * Any name exported by a module in a ``from module import *`` statement.
 * Any name in the list assigned to the ``__all__`` global variable.
 
