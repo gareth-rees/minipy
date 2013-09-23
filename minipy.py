@@ -877,6 +877,11 @@ class Rename(NodeTransformer):
         node.asname = self.rename(node.asname)
         return self.generic_visit(node)
 
+    def visit_arguments(self, node):
+        node.vararg = self.rename(node.vararg)
+        node.kwarg = self.rename(node.kwarg)
+        return self.generic_visit(node)
+
     def visit_Call(self, node):
         for k in node.keywords:
             k.arg = self.rename(k.arg)
@@ -923,6 +928,11 @@ class FindNames(NodeVisitor):
 
     def visit_alias(self, node):
         self.learn(node.asname)
+        self.generic_visit(node)
+
+    def visit_arguments(self, node):
+        self.learn(node.vararg)
+        self.learn(node.kwarg)
         self.generic_visit(node)
 
     def visit_Call(self, node):
