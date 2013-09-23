@@ -31,12 +31,11 @@ class Prec:
     Max = 18
 
 class SavePrecedence:
-    """
-    Context manager class that saves and restores the precedence and
+    """Context manager class that saves and restores the precedence and
     associativity for a SerializeVisitor instance, and emits a pair of
     parentheses if necessary to preserve the meaning.
-    """
 
+    """
     def __init__(self, visitor, prec=Prec.Max, assoc=Assoc.Non, force=False):
         self.v = visitor
         self.new_prec = prec
@@ -99,7 +98,7 @@ class SerializeVisitor(NodeVisitor):
 
     ops = {
         # Generator          0
-        # Paren              1 
+        # Paren              1
         # Tuple              2, Assoc.Non
         # Lambda             3, Assoc.Right
         Or:       ('or',     4, Assoc.Non),
@@ -202,7 +201,7 @@ class SerializeVisitor(NodeVisitor):
             self.comma(i)
             self.emit('**' + node.kwarg)
             i += 1
-    
+
     def multiline(self, node):
         return any(isinstance(node, t) for t in self.multiliners)
 
@@ -615,7 +614,7 @@ class SerializeVisitor(NodeVisitor):
             for i, e in enumerate(node.elts):
                 self.comma(i)
                 self.visit(e)
-            self.emit('}')            
+            self.emit('}')
 
     def visit_SetComp(self, node):
         with SavePrecedence(self):
@@ -657,7 +656,7 @@ class SerializeVisitor(NodeVisitor):
                 elif s and s[-1] == quotes[0]:
                     s = s[:-1] + '\\' + s[-1]
                 s = s.replace(quotes, '\\' + quotes)
-                
+
         def escape(m):
             c = ord(m.group(0))
             if c < 8 and (m.group(1) == '' or not m.group(1).isdigit()):
@@ -673,10 +672,10 @@ class SerializeVisitor(NodeVisitor):
             return re.sub('[\x00-\x1f\x7f-\xff](?=(.?))', escape, s)
 
     def shortest_string_repr(self, s):
-        """
-        Return the shortest representation of the string s suitable for a
-        Python source file in self.encoding. Generates up to eight ways
-        of representing the string and picks the shortest.
+        """Return the shortest representation of the string s suitable for a
+        Python source file in self.encoding. Generates up to eight
+        ways of representing the string and picks the shortest.
+
         """
         if self.unicode_literals:
             prefix = 'b' * isinstance(s, str)
@@ -725,7 +724,7 @@ class SerializeVisitor(NodeVisitor):
             self.emit('[')
             self.prec = Prec.Tuple
             self.visit(node.slice)
-            self.emit(']')            
+            self.emit(']')
 
     def visit_TryExcept(self, node):
         self.emit('try')
@@ -801,8 +800,7 @@ class SerializeVisitor(NodeVisitor):
                 self.visit(node.value)
 
 def serialize_ast(tree, **kwargs):
-    """
-    Serialize an abstract syntax tree according to the options and
+    """Serialize an abstract syntax tree according to the options and
     return an encoded string. Takes keyword arguments:
 
     docstrings -- Remove docstrings and other statements with no side
@@ -812,6 +810,7 @@ def serialize_ast(tree, **kwargs):
     joinlines  -- Join lines if possible (default: True)
     selftest   -- Reparse the result and check that it's identical to the
                   tree (default: True)
+
     """
     return SerializeVisitor(**kwargs).serialize(tree)
 
@@ -859,10 +858,10 @@ class FindReserved(NodeVisitor):
         self.generic_visit(node)
 
 def reserved_names_in_ast(tree):
-    """
-    Make a best effort to find reserved names (that is, names that
-    cannot be changed without changing the meaning of the program) in an
-    abstract syntax tree. Return the set of words found.
+    """Make a best effort to find reserved names (that is, names that
+    cannot be changed without changing the meaning of the program) in
+    an abstract syntax tree. Return the set of words found.
+
     """
     return FindReserved().reserve(tree)
 
@@ -904,7 +903,7 @@ class Rename(NodeTransformer):
     def visit_Global(self, node):
         for i, n in enumerate(node.names):
             node.names[i] = self.rename(n)
-        return self.generic_visit(node)        
+        return self.generic_visit(node)
 
     def visit_Name(self, node):
         node.id = self.rename(node.id)
@@ -917,12 +916,13 @@ class FindNames(NodeVisitor):
         return result
 
     def find(self, tree):
-        """
-        Find names in an abstract syntax tree and return two values. The
+        """Find names in an abstract syntax tree and return two values. The
         first is a dictionary mapping names to pairs [n, m] where n is
         the number of occurrences of the name, and m is the number of
         distinct names that appear prior to this one. The second is a
-        set of "bare" imports: that is, imports without an "as" clause.
+        set of "bare" imports: that is, imports without an "as"
+        clause.
+
         """
         from collections import defaultdict
         self.name = defaultdict(self.newname)
@@ -961,7 +961,7 @@ class FindNames(NodeVisitor):
     def visit_Global(self, node):
         for n in node.names:
             self.learn(n)
-        self.generic_visit(node)        
+        self.generic_visit(node)
 
     def visit_Name(self, node):
         self.learn(node.id)
@@ -980,9 +980,9 @@ def make_name(n):
     return name
 
 def rename_ast(tree, reserved=set()):
-    """
-    Change all names in an abstract syntax tree, except for a set of
+    """Change all names in an abstract syntax tree, except for a set of
     reserved names. The new names are as short as possible.
+
     """
     from keyword import iskeyword
     names, imports = FindNames().find(tree)
@@ -1010,13 +1010,13 @@ def rename_ast(tree, reserved=set()):
     Rename(mapping).visit(tree)
 
 def detect_encoding(filename):
-    """
-    Detect input encoding of Python source code by looking for the
+    """Detect input encoding of Python source code by looking for the
     encoding cookie on the first or second line of the file, as
     specified by PEP 263. Return a pair whose first element is the
     encoding (or 'latin1' if none was found), and whose second element
-    is text that must be copied to the transformed file: the #! line, if
-    any, and the line containing the encoding cookie, if any.
+    is text that must be copied to the transformed file: the #! line,
+    if any, and the line containing the encoding cookie, if any.
+
     """
     copied = ''
     coding_re = re.compile("#.*coding[:=]\s*([-\w.]+)")
@@ -1035,8 +1035,7 @@ def detect_encoding(filename):
 
 def minify(filename, debug=False, preserve='', output=stdout, rename=False,
            **kwargs):
-    """
-    Read Python code from the file named by the first argument, and
+    """Read Python code from the file named by the first argument, and
     write a minified version to standard output. Takes keyword
     arguments:
 
@@ -1048,6 +1047,7 @@ def minify(filename, debug=False, preserve='', output=stdout, rename=False,
     rename   -- Rename non-preserved variables (default: False)
 
     The remaining keyword arguments are passed to serialize_ast.
+
     """
     encoding, copied = detect_encoding(filename)
     tree = parse(open(filename).read())
@@ -1073,25 +1073,25 @@ def main():
                               version='%prog {0}'.format(__version__))
     p.add_option('--output', '-o', default=stdout,
                  help="output file (default: stdout)")
-    p.add_option('--docstrings', '-D', 
+    p.add_option('--docstrings', '-D',
                  action='store_true', default=False,
                  help="remove docstrings and other statements with no side effects "
                  "(implies --noselftest)")
-    p.add_option('--rename', '-R', 
+    p.add_option('--rename', '-R',
                  action='store_true', default=False,
                  help="aggressively rename non-preserved variables")
-    p.add_option('--indent', '-i', 
+    p.add_option('--indent', '-i',
                  type='int', default=1,
                  help="number of spaces per indentation level")
-    p.add_option('--preserve', '-p', 
+    p.add_option('--preserve', '-p',
                  help="preserve words from renaming (separate by commas)")
-    p.add_option('--nojoinlines', dest='joinlines', 
-                 action='store_false', default=True, 
+    p.add_option('--nojoinlines', dest='joinlines',
+                 action='store_false', default=True,
                  help="put each statement on its own line")
-    p.add_option('--noselftest', dest='selftest', 
-                 action='store_false', default=True, 
+    p.add_option('--noselftest', dest='selftest',
+                 action='store_false', default=True,
                  help="skip the self-test")
-    p.add_option('--debug', 
+    p.add_option('--debug',
                  action='store_true', default=False,
                  help="dump the parse tree")
     opts, args = p.parse_args()
