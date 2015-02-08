@@ -2,6 +2,12 @@
 
 from distutils.core import setup
 import minipy
+import os
+
+# added by cpbotha to make sure we find the README.rst
+# (with minipy 0.1, this broke the PyPI install)
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     author = minipy.__author__,
@@ -15,7 +21,7 @@ setup(
         ],
     description = 'Minify Python 2 source code',
     license = minipy.__license__,
-    long_description = open('README.rst').read(),
+    long_description = read('README.rst'),
     maintainer = minipy.__maintainer__,
     maintainer_email = minipy.__email__,
     name = 'minipy',
