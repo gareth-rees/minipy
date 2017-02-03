@@ -999,7 +999,12 @@ def rename_ast(tree, reserved=set()):
     sorted_names = sorted(((i, j, k) for k, (i, j) in names.items()),
                           key = lambda (i, j, k): (-i, j, k))
     for _, _, name in sorted_names:
-        if name is None or name[:2] == name[-2:] == '__' or name in reserved:
+        try:
+            if name is None or \
+               name[:2] == name[-2:] == '__' or \
+               name in reserved:
+                continue
+        except TypeError:
             continue
         underscores = name.startswith('_') + name.startswith('__')
         while name not in mapping:
