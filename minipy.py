@@ -571,6 +571,7 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_Print(self, node):
         self.emit('print')
+        self.emit('(')
         with SavePrecedence(self):
             self.prec = Prec.Tuple
             i = 0
@@ -583,6 +584,7 @@ class SerializeVisitor(NodeVisitor):
                 self.visit(v)
                 i += 1
             self.emit(',', not node.nl)
+        self.emit(')')
 
     def visit_Raise(self, node):
         self.emit('raise')
@@ -737,7 +739,8 @@ class SerializeVisitor(NodeVisitor):
                 if h.type:
                     self.visit(h.type)
                 if h.name:
-                    self.comma()
+                    #self.comma()
+                    self.emit('as')
                     self.visit(h.name)
             self.visit_body(h.body)
         self.visit_orelse(node)
