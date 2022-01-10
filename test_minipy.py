@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from ast import parse
 import minipy
 import os
-from StringIO import StringIO
+from io import StringIO
 from subprocess import Popen, PIPE
 import unittest
 from sys import executable
@@ -15,6 +15,7 @@ class MinipyTests(unittest.TestCase):
         with open(os.path.join(self.testdir, 'expressions.txt')) as f:
             tests = f.read().splitlines()
             for t in tests:
+                if t.startswith('#'): continue
                 src, out = t.split(' -> ')
                 self.assertEqual(minipy.serialize_ast(parse(src)), out)
 
@@ -41,8 +42,9 @@ class MinipyTests(unittest.TestCase):
                 pipe = Popen(args, stdout=PIPE)
                 output, _ = pipe.communicate()
                 resultfile = os.path.join(self.testdir, components[0] + ".py")
-                correct = open(resultfile).read()
-                self.assertEqual(output, correct)
+                with open(resultfile) as r:
+                    correct = r.read()
+                self.assertEqual(output, correct.encode('utf-8'))
 
                 # Run this test case via the Python interface
                 output = StringIO()

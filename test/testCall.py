@@ -1,5 +1,5 @@
 a=h(x=True,y=1,z=a)
-def b(e,f,g,*c,**d):
- i=b(e,f,g,*c,**d)
-def j(m,*k,**l):
+def b(c,d,e,*f,**g):
+ i=b(c,d,e,*f,**g)
+def j(k,*l,**m):
  pass
