@@ -3,7 +3,7 @@
 from ast import parse
 import minipy
 import os
-from io import StringIO
+from io import BytesIO
 from subprocess import Popen, PIPE
 import unittest
 from sys import executable
@@ -43,11 +43,11 @@ class MinipyTests(unittest.TestCase):
                 output, _ = pipe.communicate()
                 resultfile = os.path.join(self.testdir, components[0] + ".py")
                 with open(resultfile) as r:
-                    correct = r.read()
-                self.assertEqual(output, correct.encode('utf-8'))
+                    correct = r.read().encode('utf-8')
+                self.assertEqual(output, correct)
 
                 # Run this test case via the Python interface
-                output = StringIO()
+                output = BytesIO()
                 minipy.minify(filename, output=output, **kwargs)
                 output.seek(0)
                 self.assertEqual(output.read(), correct)

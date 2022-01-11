@@ -1020,14 +1020,14 @@ def detect_encoding(filename):
     if any, and the line containing the encoding cookie, if any.
 
     """
-    copied = ''
+    copied = b''
     with open(filename, 'rb') as f:
         first = f.readline()
-        if first[:2] == '#!':
-            copied = first
+        if first[:2] == b'#!':
+            copied = bytes(first)
         return 'utf-8', copied
 
-def minify(filename, debug=False, preserve='', output=stdout, rename=False,
+def minify(filename, debug=False, preserve='', output=stdout.buffer, rename=False,
            **kwargs):
     """Read Python code from the file named by the first argument, and
     write a minified version to standard output. Takes keyword
@@ -1058,15 +1058,15 @@ def minify(filename, debug=False, preserve='', output=stdout, rename=False,
     if not hasattr(output, 'write'):
         output = open(output, 'wb')
     output.write(copied)
-    output.write(minified)
-    output.write('\n')
+    output.write(minified.encode('utf-8'))
+    output.write(b'\n')
 
 def main():
     # Handle command-line arguments.
     import optparse
     p = optparse.OptionParser(usage="usage: %prog [options] [-o OUTPUT] FILE",
                               version='%prog {0}'.format(__version__))
-    p.add_option('--output', '-o', default=stdout,
+    p.add_option('--output', '-o', default=stdout.buffer,
                  help="output file (default: stdout)")
     p.add_option('--docstrings', '-D',
                  action='store_true', default=False,
