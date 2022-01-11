@@ -349,8 +349,6 @@ class SerializeVisitor(NodeVisitor):
             i = 0
             for a in node.args:
                 self.comma(i)
-                if type(a) == Starred:
-                    self.emit('*')
                 self.visit(a)
                 i += 1
             for k in node.keywords:
@@ -639,6 +637,10 @@ class SerializeVisitor(NodeVisitor):
             self.emit(':')
             if not isinstance(node.step, Name) or node.step.id != 'None':
                 self.visit(node.step)
+
+    def visit_Starred(self, node):
+        self.emit('*')
+        self.visit(node.value)
 
     _escape_sequences = [
         ('\a', r'\a'),
