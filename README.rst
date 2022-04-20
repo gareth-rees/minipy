@@ -1,13 +1,14 @@
 ======
 minipy
 ======
-a Python 2 minifier
+a Python 3 minifier
 by Gareth Rees <http://garethrees.org/>
+(python3 port by Joel Martin <https://github.com/kanaka>)
 
 
 Introduction
 ------------
-**minipy** is a minifier for Python 2. It rewrites Python 2 source code in a
+**minipy** is a minifier for Python 3. It rewrites Python 3 source code in a
 way that preserves the meaning of the code while reducing it in
 size. For example::
 

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 from ast import *
 from imp import find_module, load_module
@@ -91,9 +90,9 @@ class SerializeVisitor(NodeVisitor):
         result = ''.join(self.result)
         if not self.docstrings and self.selftest:
             original = dump(tree)
-            minified = dump(parse(result.decode(self.encoding)))
+            minified = dump(parse(result))
             if original != minified:
-                raise AssertionError, self.selftest_failure(result, original, minified)
+                raise AssertionError(self.selftest_failure(result, original, minified))
         return result
 
     ops = {
@@ -140,7 +139,7 @@ class SerializeVisitor(NodeVisitor):
     # example, "if x:pass" is OK, but "if x:if y:pass" is a syntax
     # error.
     multiliners = [
-        ClassDef, For, FunctionDef, If, TryExcept, TryFinally, While, With
+        ClassDef, For, FunctionDef, If, Try, While, With
         ]
 
     def comma(self, b=True):
@@ -184,6 +183,9 @@ class SerializeVisitor(NodeVisitor):
             self.emit('as')
             self.emit(node.asname)
 
+    def visit_arg(self, node):
+        self.emit(node.arg)
+
     def visit_arguments(self, node):
         i = 0
         for a in node.args:
@@ -193,13 +195,13 @@ class SerializeVisitor(NodeVisitor):
                 self.emit('=')
                 self.visit(node.defaults[i - len(node.args)])
             i += 1
-        if node.vararg:
+        if getattr(node, 'vararg', None):
             self.comma(i)
-            self.emit('*' + node.vararg)
+            self.emit('*' + node.vararg.arg)
             i += 1
-        if node.kwarg:
+        if getattr(node, 'kwarg', None):
             self.comma(i)
-            self.emit('**' + node.kwarg)
+            self.emit('**' + node.kwarg.arg)
             i += 1
 
     def multiline(self, node):
@@ -210,7 +212,7 @@ class SerializeVisitor(NodeVisitor):
 
     def no_side_effects(self, node):
         # Not exhaustive, but will catch many cases.
-        if isinstance(node, (Num, Str, Pass)):
+        if isinstance(node, (Constant, Pass)):
             return True
         if isinstance(node, Expr):
             return self.no_side_effects(node.value)
@@ -336,7 +338,7 @@ class SerializeVisitor(NodeVisitor):
             self.prec = Prec.Attribute
             self.assoc = Assoc.Left
             self.visit(node.func)
-            if (not node.kwargs and not node.starargs
+            if (not hasattr(node, 'kwargs') and not hasattr(node, 'starargs')
                 and not node.keywords
                 and len(node.args) == 1
                 and isinstance(node.args[0], GeneratorExp)):
@@ -351,19 +353,13 @@ class SerializeVisitor(NodeVisitor):
                 i += 1
             for k in node.keywords:
                 self.comma(i)
-                self.emit(k.arg)
-                self.emit('=')
+                if getattr(k, 'arg', None):
+                    self.emit(k.arg)
+                    self.emit('=')
+                else:
+                    self.emit('**')
                 self.visit(k.value)
                 i += 1
-            if node.starargs:
-                self.comma(i)
-                self.emit('*')
-                self.visit(node.starargs)
-                i += 1
-            if node.kwargs:
-                self.comma(i)
-                self.emit('**')
-                self.visit(node.kwargs)
             self.emit(')')
 
     def visit_ClassDef(self, node):
@@ -391,6 +387,27 @@ class SerializeVisitor(NodeVisitor):
                 self.assoc = Assoc.Right
                 self.visit(val)
 
+    def visit_Constant(self, node):
+        if type(node.value) == type(1) or type(node.value) == type(1.1):
+            s = repr(node.n)
+            sign = ''
+            prec = Prec.Attribute
+            if self.selftest and self.operator == '-':
+                prec = 14           # -(1), not -1: see issue #38.
+            if s[0] == '-':
+                sign = '-'
+                prec = 16
+            with SavePrecedence(self, prec, Assoc.Right):
+                if isinstance(node.n, float) and isinf(node.n):
+                    self.emit(sign + '1e400')
+                else:
+                    self.emit(s)
+            self.lastnum = True
+        elif type(node.value) == type(''):
+            self.emit(self.shortest_string_repr(node.value))
+        else:
+            self.emit(repr(node.value))
+
     def visit_Continue(self, node):
         self.emit('continue')
 
@@ -408,8 +425,11 @@ class SerializeVisitor(NodeVisitor):
             self.emit('{')
             for i, (k, v) in enumerate(zip(node.keys, node.values)):
                 self.comma(i)
-                self.visit(k)
-                self.emit(':')
+                if k:
+                    self.visit(k)
+                    self.emit(':')
+                else:
+                    self.emit('**')
                 self.visit(v)
             self.emit('}')
 
@@ -550,27 +570,12 @@ class SerializeVisitor(NodeVisitor):
     def visit_Name(self, node):
         self.emit(node.id)
 
-    def visit_Num(self, node):
-        s = repr(node.n)
-        sign = ''
-        prec = Prec.Attribute
-        if self.selftest and self.operator == '-':
-            prec = 14           # -(1), not -1: see issue #38.
-        if s[0] == '-':
-            sign = '-'
-            prec = 16
-        with SavePrecedence(self, prec, Assoc.Right):
-            if isinstance(node.n, float) and isinf(node.n):
-                self.emit(sign + '1e400')
-            else:
-                self.emit(s)
-        self.lastnum = True
-
     def visit_Pass(self, node):
         self.emit('pass' if self.selftest else '0')
 
     def visit_Print(self, node):
         self.emit('print')
+        self.emit('(')
         with SavePrecedence(self):
             self.prec = Prec.Tuple
             i = 0
@@ -583,19 +588,17 @@ class SerializeVisitor(NodeVisitor):
                 self.visit(v)
                 i += 1
             self.emit(',', not node.nl)
+        self.emit(')')
 
     def visit_Raise(self, node):
         self.emit('raise')
         with SavePrecedence(self):
             self.prec = Prec.Tuple
-            if node.type:
-                self.visit(node.type)
-            if node.inst:
+            if node.exc:
+                self.visit(node.exc)
+            if hasattr(node, 'expr'):
                 self.comma()
-                self.visit(node.inst)
-            if node.tback:
-                self.comma()
-                self.visit(node.tback)
+                self.visit(node.expr)
 
     def visit_Repr(self, node):
         self.emit('`')
@@ -635,6 +638,10 @@ class SerializeVisitor(NodeVisitor):
             if not isinstance(node.step, Name) or node.step.id != 'None':
                 self.visit(node.step)
 
+    def visit_Starred(self, node):
+        self.emit('*')
+        self.visit(node.value)
+
     _escape_sequences = [
         ('\a', r'\a'),
         ('\b', r'\b'),
@@ -665,7 +672,7 @@ class SerializeVisitor(NodeVisitor):
                 else:
                     return r'\0{0:o}'.format(c)
             return r'\x{0:02x}'.format(c)
-        if isinstance(s, unicode):
+        if isinstance(s, bytes):
             s = re.sub('[\x00-\x1f](?=(.?))', escape, s)
             return s.encode(self.encoding, error)
         else:
@@ -680,7 +687,7 @@ class SerializeVisitor(NodeVisitor):
         if self.unicode_literals:
             prefix = 'b' * isinstance(s, str)
         else:
-            prefix = 'u' * isinstance(s, unicode)
+            prefix = 'u' * isinstance(s, bytes)
         cand = []               # List of candidate representation.
 
         # The constraints on r-prefixed strings are really quite tight:
@@ -713,9 +720,6 @@ class SerializeVisitor(NodeVisitor):
             cand.append("{0}{1}{2}{1}".format(prefix, q, s_encoded))
         return min(cand, key=len)
 
-    def visit_Str(self, node):
-        self.emit(self.shortest_string_repr(node.s))
-
     def visit_Subscript(self, node):
         with SavePrecedence(self, Prec.Attribute, Assoc.Left):
             self.prec = Prec.Attribute
@@ -726,7 +730,7 @@ class SerializeVisitor(NodeVisitor):
             self.visit(node.slice)
             self.emit(']')
 
-    def visit_TryExcept(self, node):
+    def visit_Try(self, node):
         self.emit('try')
         self.visit_body(node.body)
         for h in node.handlers:
@@ -737,17 +741,10 @@ class SerializeVisitor(NodeVisitor):
                 if h.type:
                     self.visit(h.type)
                 if h.name:
-                    self.comma()
-                    self.visit(h.name)
+                    self.emit('as')
+                    self.emit(h.name)
             self.visit_body(h.body)
         self.visit_orelse(node)
-
-    def visit_TryFinally(self, node):
-        if len(node.body) == 1 and isinstance(node.body[0], TryExcept):
-            self.visit(node.body[0])
-        else:
-            self.emit('try')
-            self.visit_body(node.body)
         if node.finalbody:
             self.newline()
             self.emit('finally')
@@ -779,18 +776,16 @@ class SerializeVisitor(NodeVisitor):
 
     def visit_With(self, node):
         self.emit('with')
-        while True:
-            self.visit(node.context_expr)
-            if node.optional_vars:
+        i = 0
+        for item in node.items:
+            self.comma(i)
+            self.visit(item.context_expr)
+            if item.optional_vars:
                 self.emit('as')
                 with SavePrecedence(self, Prec.Tuple):
                     self.prec = Prec.Tuple
-                    self.visit(node.optional_vars)
-            if len(node.body) == 1 and isinstance(node.body[0], With):
-                self.comma()
-                node = node.body[0]
-            else:
-                break
+                    self.visit(item.optional_vars)
+            i += 1
         self.visit_body(node.body)
 
     def visit_Yield(self, node):
@@ -816,8 +811,8 @@ def serialize_ast(tree, **kwargs):
 
 class FindReserved(NodeVisitor):
     def reserve(self, tree):
-        import __builtin__
-        self.reserved = set(dir(__builtin__))
+        import builtins
+        self.reserved = set(dir(builtins))
         self.visit(tree)
         return self.reserved
 
@@ -882,9 +877,11 @@ class Rename(NodeTransformer):
             node.asname = self.rename(node.asname)
         return self.generic_visit(node)
 
+    def visit_arg(self, node):
+        node.arg = self.rename(node.arg)
+        return self.generic_visit(node)
+
     def visit_arguments(self, node):
-        node.vararg = self.rename(node.vararg)
-        node.kwarg = self.rename(node.kwarg)
         return self.generic_visit(node)
 
     def visit_Call(self, node):
@@ -907,6 +904,10 @@ class Rename(NodeTransformer):
 
     def visit_Name(self, node):
         node.id = self.rename(node.id)
+        return self.generic_visit(node)
+
+    def visit_ExceptHandler(self, node):
+        node.name = self.rename(node.name)
         return self.generic_visit(node)
 
 class FindNames(NodeVisitor):
@@ -940,9 +941,10 @@ class FindNames(NodeVisitor):
         self.learn(node.asname)
         self.generic_visit(node)
 
+    def visit_arg(self, node):
+        self.learn(node.arg)
+
     def visit_arguments(self, node):
-        self.learn(node.vararg)
-        self.learn(node.kwarg)
         self.generic_visit(node)
 
     def visit_Call(self, node):
@@ -997,7 +999,7 @@ def rename_ast(tree, reserved=set()):
     mapping = dict()
     n = [0] * 3
     sorted_names = sorted(((i, j, k) for k, (i, j) in names.items()),
-                          key = lambda (i, j, k): (-i, j, k))
+                          key = lambda ijk: (-ijk[0], ijk[1], ijk[2]))
     for _, _, name in sorted_names:
         if name is None or name[:2] == name[-2:] == '__' or name in reserved:
             continue
@@ -1018,22 +1020,14 @@ def detect_encoding(filename):
     if any, and the line containing the encoding cookie, if any.
 
     """
-    copied = ''
-    coding_re = re.compile("#.*coding[:=]\s*([-\w.]+)")
+    copied = b''
     with open(filename, 'rb') as f:
         first = f.readline()
-        m = coding_re.search(first)
-        if first[:2] == '#!' or m:
-            copied = first
-        if not m:
-            second = f.readline()
-            m = coding_re.search(second)
-            if m:
-                copied += second
-        encoding = m.group(1) if m else 'latin1'
-        return encoding, copied
+        if first[:2] == b'#!':
+            copied = bytes(first)
+        return 'utf-8', copied
 
-def minify(filename, debug=False, preserve='', output=stdout, rename=False,
+def minify(filename, debug=False, preserve='', output=stdout.buffer, rename=False,
            **kwargs):
     """Read Python code from the file named by the first argument, and
     write a minified version to standard output. Takes keyword
@@ -1050,7 +1044,8 @@ def minify(filename, debug=False, preserve='', output=stdout, rename=False,
 
     """
     encoding, copied = detect_encoding(filename)
-    tree = parse(open(filename).read())
+    with open(filename) as f:
+        tree = parse(f.read())
     if debug:
         stderr.write(dump(tree))
         stderr.write('\n')
@@ -1063,15 +1058,15 @@ def minify(filename, debug=False, preserve='', output=stdout, rename=False,
     if not hasattr(output, 'write'):
         output = open(output, 'wb')
     output.write(copied)
-    output.write(minified)
-    output.write('\n')
+    output.write(minified.encode('utf-8'))
+    output.write(b'\n')
 
 def main():
     # Handle command-line arguments.
     import optparse
     p = optparse.OptionParser(usage="usage: %prog [options] [-o OUTPUT] FILE",
                               version='%prog {0}'.format(__version__))
-    p.add_option('--output', '-o', default=stdout,
+    p.add_option('--output', '-o', default=stdout.buffer,
                  help="output file (default: stdout)")
     p.add_option('--docstrings', '-D',
                  action='store_true', default=False,
